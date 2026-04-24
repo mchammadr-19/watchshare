@@ -386,7 +386,8 @@
                 <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black flex flex-col font-inter relative">
                     <header className="sticky top-0 z-30 bg-black/90 backdrop-blur-xl px-4 py-4 flex items-center justify-between border-b border-white/10">
                         <div className="flex items-center h-8 sm:h-10">
-                            <img src="logo.png" alt="WatchShare" className="h-5 sm:h-6 w-auto object-contain" />
+                            {/* Updated Logo with header.png */}
+                            <img src="header.png" alt="WatchShare" className="h-5 sm:h-6 w-auto object-contain" />
                         </div>
                         <div className="flex items-center gap-2">
                             {/* Donate Button: Support via Ko-fi */}
@@ -457,7 +458,10 @@
                     {showSettings && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/95 backdrop-blur-md transition-opacity">
                             <div className="bg-neutral-900 w-full max-w-sm rounded-[2.5rem] p-10 border border-white/10 shadow-2xl animate-slide-up">
-                                <div className="flex justify-center mb-8"><img src="logo.png" className="h-12 w-auto" alt="Logo" /></div>
+                                <div className="flex justify-center mb-8">
+                                    {/* Updated Logo with header.png in modal */}
+                                    <img src="header.png" className="h-12 w-auto" alt="Logo" />
+                                </div>
                                 <h2 className="text-2xl font-oswald font-light mb-3 text-center uppercase tracking-tighter">API Setup</h2>
                                 <p className="text-sm text-neutral-400 mb-8 text-center leading-relaxed font-inter">Please enter your TMDB API Key.<br />Get it for free at <a href="https://www.themoviedb.org/settings/api" target="_blank" className="text-white underline font-bold">The Movie DB</a>.</p>
                                 <input type="password" placeholder="Paste API Key here..." value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="w-full bg-black border border-white/10 rounded-2xl p-5 mb-8 focus:ring-1 focus:ring-white outline-none transition-all text-center font-inter" />
