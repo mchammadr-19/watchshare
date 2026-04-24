@@ -6,7 +6,7 @@
     <title>WatchShare - Story Canvas Editor</title>
     
     <!-- PWA Mini Icon & Dynamic Manifest -->
-    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="icon" type="image/png" href="favicon.png">
     <script>
         const manifest = {
             "name": "WatchShare",
@@ -20,7 +20,6 @@
         const manifestUrl = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
         document.write('<link rel="manifest" href="' + manifestUrl + '">');
         
-        // Dummy Service Worker untuk memicu trigger "Add to Homescreen" di browser
         if ('serviceWorker' in navigator) {
             const swBlob = new Blob(["self.addEventListener('fetch', function(e) {});"], { type: 'application/javascript' });
             navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
@@ -35,7 +34,6 @@
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        /* Import Font Oswald (Light 300) & Inter */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Oswald:wght@300;400;500;700&display=swap');
         
         body { 
@@ -55,14 +53,12 @@
             overflow: hidden;
         }
 
-        /* Animations for seamless transition */
         @keyframes slideUp {
             from { transform: translateY(20px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
         .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
 
-        /* Custom scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #000; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
@@ -74,7 +70,6 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
         
-        // Stable SVG Icon Component
         const Icon = ({ name, size = 24, className = "" }) => {
             const icons = {
                 settings: <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2zM12 15a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" />,
@@ -83,22 +78,10 @@
                 frown: <><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></>,
                 "monitor-play": <><path d="m10 7 5 3-5 3V7Z"/><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M12 17v4"/><path d="M8 21h8"/></>,
                 "alert-circle": <><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></>,
-                film: <><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M17 3v18"/><path d="M3 7h4"/><path d="M3 11h4"/><path d="M3 15h4"/><path d="M17 7h4"/><path d="M17 11h4"/><path d="M17 15h4"/></>,
                 share: <><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></>
             };
             return (
-                <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    width={size} 
-                    height={size} 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    className={className}
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
                     {icons[name] || null}
                 </svg>
             );
@@ -106,7 +89,6 @@
 
         const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 
-        // Hex to RGB converter for dynamic gradient
         const hexToRgb = (hex) => {
             const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
             return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '0,0,0';
@@ -122,27 +104,20 @@
             const [loading, setLoading] = useState(false);
             const [error, setError] = useState(null);
             const [generating, setGenerating] = useState(false);
-            const [bgColor, setBgColor] = useState('#000000'); // State for Background Color
-            const [bgOpacity, setBgOpacity] = useState(0.95); // State for Background Opacity
+            const [bgColor, setBgColor] = useState('#000000');
+            const [bgOpacity, setBgOpacity] = useState(0); // Default set to 0
             const [showAllMovies, setShowAllMovies] = useState(false);
             const [showAllSeries, setShowAllSeries] = useState(false);
             const [hasSearched, setHasSearched] = useState(false);
-            const [installPrompt, setInstallPrompt] = useState(null); // State for PWA Install
+            const [installPrompt, setInstallPrompt] = useState(null);
             const canvasRef = useRef(null);
 
-            // Preload Fonts to ensure Canvas uses them
             useEffect(() => {
-                document.fonts.ready.then(() => {
-                    console.log("Fonts loaded.");
-                });
-
-                // Menangkap event install PWA dari browser
                 const handleBeforeInstall = (e) => {
                     e.preventDefault();
                     setInstallPrompt(e);
                 };
                 window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-
                 return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
             }, []);
 
@@ -156,49 +131,45 @@
             const searchAll = async (e) => {
                 if (e) e.preventDefault();
                 if (!query || !apiKey) return;
-                
                 setLoading(true);
                 setError(null);
-                setMovies([]);
-                setSeries([]);
-                setShowAllMovies(false);
-                setShowAllSeries(false);
                 setHasSearched(false);
-
                 try {
                     const [movieRes, tvRes] = await Promise.all([
                         fetch(`https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US&page=1`),
                         fetch(`https://api.themoviedb.org/3/search/tv?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US&page=1`)
                     ]);
-
-                    if (movieRes.status === 401 || tvRes.status === 401) {
-                        throw new Error("Invalid API Key. Please check your settings.");
-                    }
-
-                    if (!movieRes.ok || !tvRes.ok) {
-                        throw new Error("Failed to fetch data from TMDB.");
-                    }
-
+                    if (movieRes.status === 401) throw new Error("Invalid API Key.");
                     const movieData = await movieRes.json();
                     const tvData = await tvRes.json();
+                    setMovies((movieData.results || []).filter(i => i.poster_path).slice(0, 20));
+                    setSeries((tvData.results || []).filter(i => i.poster_path).slice(0, 20));
+                } catch (err) { setError(err.message); }
+                finally { setLoading(false); setHasSearched(true); }
+            };
 
-                    // Filter dilonggarkan: hanya wajib punya poster (jika tidak ada backdrop, poster akan diblur)
-                    const filteredMovies = (movieData.results || [])
-                        .filter(item => item.poster_path)
-                        .slice(0, 20);
-
-                    const filteredSeries = (tvData.results || [])
-                        .filter(item => item.poster_path)
-                        .slice(0, 20);
-
-                    setMovies(filteredMovies);
-                    setSeries(filteredSeries);
-                } catch (err) {
-                    setError(err.message);
-                } finally {
-                    setLoading(false);
-                    setHasSearched(true);
+            const getBalancedLines = (ctx, text, maxWidth) => {
+                const words = text.split(' ');
+                let line = '';
+                let lines = [];
+                for (let n = 0; n < words.length; n++) {
+                    let testLine = line + words[n] + ' ';
+                    if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+                        lines.push(line.trim());
+                        line = words[n] + ' ';
+                    } else { line = testLine; }
                 }
+                lines.push(line.trim());
+                if (lines.length === 2) {
+                    let lastLineWords = lines[1].split(' ');
+                    let prevLineWords = lines[0].split(' ');
+                    if (lastLineWords.length === 1 && prevLineWords.length > 1) {
+                        let movedWord = prevLineWords.pop();
+                        lines[0] = prevLineWords.join(' ');
+                        lines[1] = movedWord + ' ' + lastLineWords[0];
+                    }
+                }
+                return lines.slice(0, 2);
             };
 
             const generateStoryImage = async (item) => {
@@ -209,28 +180,13 @@
                 canvas.height = 1920;
 
                 const drawRoundedRect = (x, y, w, h, r) => {
-                    if (ctx.roundRect) {
-                        ctx.roundRect(x, y, w, h, r);
-                    } else {
-                        if (w < 2 * r) r = w / 2;
-                        if (h < 2 * r) r = h / 2;
-                        ctx.beginPath();
-                        ctx.moveTo(x + r, y);
-                        ctx.arcTo(x + w, y, x + w, y + h, r);
-                        ctx.arcTo(x + w, y + h, x, y + h, r);
-                        ctx.arcTo(x, y + h, x, y, r);
-                        ctx.arcTo(x, y, x + w, y, r);
-                        ctx.closePath();
-                    }
+                    ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.closePath();
                 };
 
                 try {
-                    // 1. Draw Base Background Color
                     ctx.fillStyle = bgColor;
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                    // 2. Draw Backdrop with Opacity to blend with Background Color
-                    // Jika tidak ada backdrop, gunakan gambar poster yang diblur sebagai background
                     const bgImagePath = item.backdrop_path 
                         ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}?canvas=true`
                         : `${TMDB_IMAGE_BASE}${item.poster_path}?canvas=true`;
@@ -241,7 +197,7 @@
                     await new Promise(r => { bgImg.onload = r; bgImg.onerror = r; });
                     if (bgImg.complete) {
                         ctx.save();
-                        ctx.globalAlpha = 0.45; // Base transparency for image
+                        ctx.globalAlpha = 0.45;
                         ctx.filter = 'blur(25px)';
                         const scale = Math.max(canvas.width / bgImg.width, canvas.height / bgImg.height);
                         const x = (canvas.width / 2) - (bgImg.width / 2) * scale;
@@ -250,7 +206,6 @@
                         ctx.restore();
                     }
 
-                    // 3. Draw Dynamic Gradient Overlay (Using selected bgColor and opacity settings)
                     const rgbColor = hexToRgb(bgColor);
                     const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
                     grad.addColorStop(0, `rgba(${rgbColor}, ${bgOpacity * 0.1})`);
@@ -258,178 +213,69 @@
                     ctx.fillStyle = grad;
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                    // 4. Draw Straight Poster Image (Rotation Removed)
                     const img = new Image();
                     img.crossOrigin = "anonymous";
                     img.src = `${TMDB_IMAGE_BASE}${item.poster_path}?canvas=true`;
                     await new Promise(r => { img.onload = r; img.onerror = r; });
-
                     if (img.complete) {
                         const pw = 640, ph = 960, px = (canvas.width - pw) / 2, py = 200, radius = 45;
                         ctx.save();
-                        
-                        ctx.shadowColor = 'rgba(0,0,0,0.8)';
-                        ctx.shadowBlur = 70;
-                        ctx.shadowOffsetY = 30;
-                        
-                        ctx.beginPath();
+                        ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 70; ctx.shadowOffsetY = 30;
                         drawRoundedRect(px, py, pw, ph, radius);
                         ctx.clip();
                         ctx.drawImage(img, px, py, pw, ph);
                         ctx.restore();
                     }
 
-                    // 5. Draw Title (Smart Balanced Wrap, Oswald Light Font, No Extra Kerning)
-                    ctx.fillStyle = '#ffffff';
-                    ctx.textAlign = 'center';
+                    ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
                     const title = (item.title || item.name).toUpperCase();
-                    // Modern canvas supports letterSpacing, explicitly set to normal
-                    if (ctx.letterSpacing !== undefined) {
-                        ctx.letterSpacing = "0px";
-                    }
                     ctx.font = '300 70px Oswald, sans-serif';
+                    const lines = getBalancedLines(ctx, title, 900);
+                    let textY = lines.length === 1 ? 1330 : 1290;
+                    ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 15; ctx.shadowOffsetY = 5;
+                    lines.forEach(l => { ctx.fillText(l.trim(), canvas.width / 2, textY); textY += 85; });
+                    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
-                    const words = title.split(' ');
-                    let line = '';
-                    let lines = [];
-                    const maxWidth = 900; 
-
-                    for (let n = 0; n < words.length; n++) {
-                        let testLine = line + words[n] + ' ';
-                        if (ctx.measureText(testLine).width > maxWidth && n > 0) {
-                            lines.push(line.trim());
-                            line = words[n] + ' ';
-                        } else { 
-                            line = testLine; 
-                        }
-                    }
-                    lines.push(line.trim());
-
-                    // Balance logic to avoid orphaned word on second line
-                    if (lines.length >= 2) {
-                        let lastLineWords = lines[1].split(' ');
-                        let prevLineWords = lines[0].split(' ');
-                        
-                        if (lastLineWords.length === 1 && prevLineWords.length > 1) {
-                            let movedWord = prevLineWords.pop();
-                            lines[0] = prevLineWords.join(' ');
-                            lines[1] = movedWord + ' ' + lastLineWords[0];
-                        }
-                    }
-                    lines = lines.slice(0, 2);
-
-                    // Dynamic Y positioning to perfectly center text between poster and details box
-                    let textY = lines.length === 1 ? 1330 : 1290; 
-                    
-                    // Add subtle shadow to text for readability against any background color
-                    ctx.shadowColor = 'rgba(0,0,0,0.6)';
-                    ctx.shadowBlur = 15;
-                    ctx.shadowOffsetY = 5;
-
-                    lines.forEach(l => {
-                        ctx.fillText(l.trim(), canvas.width / 2, textY);
-                        textY += 85; 
-                    });
-                    
-                    ctx.shadowBlur = 0;
-                    ctx.shadowOffsetY = 0;
-
-                    // 6. Draw Rounded Text Box for Details (Year, Rating, Type) with Inter font
-                    ctx.font = '500 34px Inter, sans-serif'; 
-                    const date = item.release_date || item.first_air_date || 'N/A';
-                    const yearTxt = date.split('-')[0];
+                    ctx.font = '500 34px Inter, sans-serif';
+                    const yearTxt = (item.release_date || item.first_air_date || 'N/A').split('-')[0];
                     const ratingTxt = `★ ${item.vote_average.toFixed(1)}`;
                     const typeTxt = item.media_type === 'movie' || item.title ? 'MOVIE' : 'SERIES';
-                    
-                    const yearW = ctx.measureText(yearTxt).width;
-                    const ratingW = ctx.measureText(ratingTxt).width;
-                    const typeW = ctx.measureText(typeTxt).width;
-                    const dotSpace = 44; 
-                    
-                    const totalTextW = yearW + ratingW + typeW + (dotSpace * 2);
-                    const boxW = totalTextW + 90; 
-                    const boxH = 72; 
-                    const boxX = (canvas.width - boxW) / 2;
-                    // Adjusted Box Y calculation to balance the space relative to title
-                    const boxY = textY - 5; 
-                    const boxRadius = 36;
+                    const yearW = ctx.measureText(yearTxt).width, ratingW = ctx.measureText(ratingTxt).width, typeW = ctx.measureText(typeTxt).width;
+                    const dotSpace = 44, totalTextW = yearW + ratingW + typeW + (dotSpace * 2);
+                    const boxW = totalTextW + 90, boxH = 72, boxX = (canvas.width - boxW) / 2, boxY = textY - 5, boxRadius = 36;
 
-                    // Background Box
                     ctx.save();
-                    ctx.beginPath();
                     drawRoundedRect(boxX, boxY, boxW, boxH, boxRadius);
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-                    ctx.fill();
-                    ctx.lineWidth = 2;
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-                    ctx.stroke();
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; ctx.fill();
+                    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; ctx.stroke();
                     ctx.restore();
 
-                    // Details Text inside Box
-                    let currentX = boxX + 45; // start padding
-                    const textBaselineY = boxY + boxH / 2 + 2; // visual center
-                    
-                    ctx.save();
-                    ctx.textBaseline = 'middle';
-                    ctx.textAlign = 'left';
+                    let currentX = boxX + 45; const textBaselineY = boxY + boxH / 2 + 2;
+                    ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+                    ctx.fillStyle = '#ffffff'; ctx.fillText(yearTxt, currentX, textBaselineY); currentX += yearW + dotSpace/2;
+                    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.beginPath(); ctx.arc(currentX, textBaselineY, 4.5, 0, Math.PI * 2); ctx.fill(); currentX += dotSpace/2;
+                    ctx.fillStyle = '#facc15'; ctx.fillText(ratingTxt, currentX, textBaselineY); currentX += ratingW + dotSpace/2;
+                    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.beginPath(); ctx.arc(currentX, textBaselineY, 4.5, 0, Math.PI * 2); ctx.fill(); currentX += dotSpace/2;
+                    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillText(typeTxt, currentX, textBaselineY); ctx.restore();
 
-                    // Year
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillText(yearTxt, currentX, textBaselineY);
-                    currentX += yearW + dotSpace/2;
-
-                    // Dot 1
-                    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-                    ctx.beginPath();
-                    ctx.arc(currentX, textBaselineY, 4.5, 0, Math.PI * 2);
-                    ctx.fill();
-                    currentX += dotSpace/2;
-
-                    // Rating
-                    ctx.fillStyle = '#facc15'; // Tailwind yellow-400
-                    ctx.fillText(ratingTxt, currentX, textBaselineY);
-                    currentX += ratingW + dotSpace/2;
-
-                    // Dot 2
-                    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-                    ctx.beginPath();
-                    ctx.arc(currentX, textBaselineY, 4.5, 0, Math.PI * 2);
-                    ctx.fill();
-                    currentX += dotSpace/2;
-
-                    // Type
-                    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-                    ctx.fillText(typeTxt, currentX, textBaselineY);
-                    ctx.restore();
-
-                    // 7. Draw Attribution ON CANVAS OUTPUT
-                    const attrImg = new Image();
-                    attrImg.src = 'render.png';
+                    const attrImg = new Image(); attrImg.src = 'render.png';
                     await new Promise(r => { attrImg.onload = r; attrImg.onerror = r; });
-                    if (attrImg.complete && attrImg.naturalWidth > 0) {
-                        const aWidth = 540; // Diperbesar karena logo baru lebih panjang ke samping
-                        const aHeight = (attrImg.height / attrImg.width) * aWidth;
-                        const ax = (canvas.width - aWidth) / 2;
-                        const ay = 1780 - (aHeight / 2); // Posisi Y disesuaikan ke tengah bawah
-                        ctx.save();
-                        ctx.globalAlpha = 0.2; // Opacity diubah menjadi 20%
-                        ctx.drawImage(attrImg, ax, ay, aWidth, aHeight);
+                    if (attrImg.complete) {
+                        const aWidth = 540, aHeight = (attrImg.height / attrImg.width) * aWidth;
+                        ctx.save(); ctx.globalAlpha = 0.2;
+                        ctx.drawImage(attrImg, (canvas.width - aWidth) / 2, 1780 - (aHeight / 2), aWidth, aHeight);
                         ctx.restore();
                     }
 
                     const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.95));
-                    setGenerating(false);
-                    return blob;
-                } catch (e) {
-                    console.error("Canvas generation failed", e);
-                    setGenerating(false);
-                }
+                    setGenerating(false); return blob;
+                } catch (e) { console.error(e); setGenerating(false); }
             };
 
             const handleShare = async (item) => {
                 const blob = await generateStoryImage(item);
                 if (!blob) return;
-                const file = new File([blob], `story-${item.id}.jpg`, { type: 'image/jpeg' });
+                const file = new File([blob], `watchshare-${item.id}.jpg`, { type: 'image/jpeg' });
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
                     try { await navigator.share({ files: [file], title: item.title || item.name }); }
                     catch (err) { downloadImage(blob, item.title || item.name); }
@@ -439,23 +285,13 @@
             const downloadImage = (blob, title) => {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                a.href = url;
-                a.download = `watchshare-${title.toLowerCase().replace(/\s+/g, '-')}.jpg`;
-                a.click();
+                a.href = url; a.download = `watchshare-${title.toLowerCase().replace(/\s+/g, '-')}.jpg`; a.click();
                 URL.revokeObjectURL(url);
             };
 
             const PosterItem = ({ item }) => (
-                <div 
-                    onClick={() => setSelectedItem(item)} 
-                    className="group relative aspect-[2/3] bg-neutral-900 rounded-2xl overflow-hidden cursor-pointer border border-white/5 hover:border-white/20 transition-all transform active:scale-95"
-                >
-                    <img 
-                        src={`${TMDB_IMAGE_BASE}${item.poster_path}`} 
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                        loading="lazy" 
-                        alt={item.title || item.name}
-                    />
+                <div onClick={() => setSelectedItem(item)} className="group relative aspect-[2/3] bg-neutral-900 rounded-2xl overflow-hidden cursor-pointer border border-white/5 hover:border-white/20 transition-all transform active:scale-95">
+                    <img src={`${TMDB_IMAGE_BASE}${item.poster_path}`} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" alt={item.title || item.name} />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent p-4 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                         <p className="text-xs font-oswald font-light leading-tight uppercase">{item.title || item.name}</p>
                         <p className="text-[10px] text-yellow-500 mt-1 font-inter">★ {item.vote_average?.toFixed(1)}</p>
@@ -469,268 +305,126 @@
                         <div className="flex items-center h-8 sm:h-10">
                             <img src="logo.png" alt="WatchShare" className="h-5 sm:h-6 w-auto object-contain" />
                         </div>
-                        <button 
-                            onClick={() => setShowSettings(true)} 
-                            className="p-2.5 bg-white/5 rounded-full hover:bg-white/10 transition-colors"
-                        >
+                        <button onClick={() => setShowSettings(true)} className="p-2.5 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
                             <Icon name="settings" size={20} className="text-neutral-300" />
                         </button>
                     </header>
 
                     <main className="max-w-4xl mx-auto p-6 flex-grow w-full">
                         <form onSubmit={searchAll} className="relative mb-12 mt-2">
-                            <input
-                                type="text"
-                                placeholder="Search for movies or tv series..."
-                                value={query}
-                                onChange={(e) => {
-                                    setQuery(e.target.value);
-                                    setHasSearched(false);
-                                }}
-                                className="w-full bg-neutral-900/50 border border-white/10 rounded-3xl py-5 pl-14 pr-6 focus:ring-1 focus:ring-white focus:bg-neutral-900 outline-none text-lg transition-all shadow-2xl font-inter"
-                            />
-                            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-400">
-                                <Icon name="search" size={22} />
-                            </div>
+                            <input type="text" placeholder="Search for movies or tv series..." value={query} onChange={(e) => { setQuery(e.target.value); setHasSearched(false); }} className="w-full bg-neutral-900/50 border border-white/10 rounded-3xl py-5 pl-14 pr-6 focus:ring-1 focus:ring-white outline-none text-lg transition-all shadow-2xl font-inter" />
+                            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-400"><Icon name="search" size={22} /></div>
                         </form>
 
                         {loading ? (
-                            <div className="flex flex-col items-center justify-center py-24 gap-4">
-                                <div className="w-12 h-12 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                <p className="text-neutral-500 text-sm font-medium uppercase">Fetching data...</p>
-                            </div>
+                            <div className="flex flex-col items-center justify-center py-24 gap-4"><div className="w-12 h-12 border-2 border-white border-t-transparent rounded-full animate-spin"></div><p className="text-neutral-500 text-sm font-medium uppercase tracking-widest">Fetching data...</p></div>
                         ) : error ? (
-                            <div className="text-center py-20 bg-red-900/10 border border-red-500/20 rounded-[2rem] px-6">
-                                <Icon name="alert-circle" size={48} className="mx-auto mb-4 text-red-500" />
-                                <h3 className="text-xl font-oswald font-light text-red-500 mb-2 uppercase">Error</h3>
-                                <p className="text-neutral-400 mb-6 font-inter">{error}</p>
-                                <button 
-                                    onClick={() => setShowSettings(true)}
-                                    className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all active:scale-95 font-inter font-bold"
-                                >
-                                    Fix API Key
-                                </button>
-                            </div>
+                            <div className="text-center py-20 bg-red-900/10 border border-red-500/20 rounded-[2rem] px-6"><Icon name="alert-circle" size={48} className="mx-auto mb-4 text-red-500" /><h3 className="text-xl font-oswald font-light text-red-500 mb-2 uppercase">Error</h3><p className="text-neutral-400 mb-6 font-inter">{error}</p><button onClick={() => setShowSettings(true)} className="px-6 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all active:scale-95">Fix API Key</button></div>
                         ) : (
                             <div className="space-y-16 pb-20">
                                 {movies.length > 0 && (
                                     <section>
-                                        <div className="flex justify-between items-end mb-6">
-                                            <h2 className="text-2xl font-oswald font-light uppercase">Movies</h2>
-                                            {movies.length > 4 && (
-                                                <button 
-                                                    onClick={() => setShowAllMovies(!showAllMovies)}
-                                                    className="text-xs font-inter font-bold text-neutral-400 hover:text-white uppercase tracking-wider transition-colors pb-1"
-                                                >
-                                                    {showAllMovies ? 'Show Less' : 'Show All'}
-                                                </button>
-                                            )}
-                                        </div>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                            {(showAllMovies ? movies : movies.slice(0, 4)).map(item => <PosterItem key={`movie-${item.id}`} item={item} />)}
-                                        </div>
+                                        <div className="flex justify-between items-end mb-6"><h2 className="text-2xl font-oswald font-light uppercase tracking-wide">Movies</h2>{movies.length > 4 && <button onClick={() => setShowAllMovies(!showAllMovies)} className="text-xs font-inter font-bold text-neutral-400 hover:text-white uppercase tracking-wider transition-colors pb-1">{showAllMovies ? 'Show Less' : 'Show All'}</button>}</div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">{(showAllMovies ? movies : movies.slice(0, 4)).map(item => <PosterItem key={`movie-${item.id}`} item={item} />)}</div>
                                     </section>
                                 )}
-
                                 {series.length > 0 && (
                                     <section>
-                                        <div className="flex justify-between items-end mb-6">
-                                            <h2 className="text-2xl font-oswald font-light uppercase">TV Series</h2>
-                                            {series.length > 4 && (
-                                                <button 
-                                                    onClick={() => setShowAllSeries(!showAllSeries)}
-                                                    className="text-xs font-inter font-bold text-neutral-400 hover:text-white uppercase tracking-wider transition-colors pb-1"
-                                                >
-                                                    {showAllSeries ? 'Show Less' : 'Show All'}
-                                                </button>
-                                            )}
-                                        </div>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                            {(showAllSeries ? series : series.slice(0, 4)).map(item => <PosterItem key={`tv-${item.id}`} item={item} />)}
-                                        </div>
+                                        <div className="flex justify-between items-end mb-6"><h2 className="text-2xl font-oswald font-light uppercase tracking-wide">TV Series</h2>{series.length > 4 && <button onClick={() => setShowAllSeries(!showAllSeries)} className="text-xs font-inter font-bold text-neutral-400 hover:text-white uppercase tracking-wider transition-colors pb-1">{showAllSeries ? 'Show Less' : 'Show All'}</button>}</div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">{(showAllSeries ? series : series.slice(0, 4)).map(item => <PosterItem key={`tv-${item.id}`} item={item} />)}</div>
                                     </section>
                                 )}
-
-                                {!loading && hasSearched && query && movies.length === 0 && series.length === 0 && !error && (
-                                    <div className="text-center py-20">
-                                        <Icon name="frown" size={48} className="mx-auto mb-4 text-neutral-700" />
-                                        <p className="text-neutral-500 font-inter">No results found for "{query}".</p>
-                                    </div>
-                                )}
-                                
-                                {!query && !error && (
-                                    <div className="text-center py-24 opacity-20">
-                                        <Icon name="monitor-play" size={80} className="mx-auto mb-4" />
-                                        <p className="text-xl font-oswald font-light uppercase">Start Searching</p>
-                                    </div>
-                                )}
+                                {!loading && hasSearched && query && movies.length === 0 && series.length === 0 && !error && (<div className="text-center py-20 text-neutral-500 font-inter">No results found for "{query}".</div>)}
+                                {!query && !error && (<div className="text-center py-24 opacity-20"><Icon name="monitor-play" size={80} className="mx-auto mb-4" /><p className="text-xl font-oswald font-light uppercase tracking-widest">Start Searching</p></div>)}
                             </div>
                         )}
                     </main>
 
-                    {/* ALWAYS VISIBLE UI FOOTER */}
                     <footer className="py-10 border-t border-white/5 flex flex-col items-center gap-4 bg-black">
                         <img src="attribution.png" className="h-6 w-auto opacity-50 grayscale hover:opacity-100 hover:grayscale-0 transition-all" alt="TMDB Attribution" />
-                        <p className="text-[10px] text-neutral-600 font-medium px-6 text-center font-inter">
-                            This product uses the TMDB API but is not endorsed or certified by TMDB.
-                        </p>
+                        <p className="text-[10px] text-neutral-600 font-medium px-6 text-center">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
                     </footer>
 
-                    {/* SETTINGS MODAL */}
                     {showSettings && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/95 backdrop-blur-md transition-opacity">
                             <div className="bg-neutral-900 w-full max-w-sm rounded-[2.5rem] p-10 border border-white/10 shadow-2xl animate-slide-up">
-                                <div className="flex justify-center mb-8">
-                                    <img src="logo.png" className="h-12 w-auto" alt="Logo" />
-                                </div>
+                                <div className="flex justify-center mb-8"><img src="logo.png" className="h-12 w-auto" alt="Logo" /></div>
                                 <h2 className="text-2xl font-oswald font-light mb-3 text-center uppercase">API Setup</h2>
-                                <p className="text-sm text-neutral-400 mb-8 text-center leading-relaxed px-2 font-inter">
-                                    Please enter your TMDB API Key.<br />
-                                    Get it for free at <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer" className="text-white underline font-bold">The Movie DB</a>.
-                                </p>
-                                <input
-                                    type="password"
-                                    placeholder="Paste API Key here..."
-                                    value={apiKey}
-                                    onChange={(e) => setApiKey(e.target.value)}
-                                    className="w-full bg-black border border-white/10 rounded-2xl p-5 mb-8 focus:ring-1 focus:ring-white outline-none transition-all text-center font-inter"
-                                />
-                                <button 
-                                    onClick={() => saveApiKey(apiKey)} 
-                                    className="w-full py-5 bg-white text-black rounded-2xl text-lg hover:bg-neutral-200 transition-all uppercase active:scale-95 font-inter font-bold"
-                                >
-                                    GET STARTED
-                                </button>
+                                <p className="text-sm text-neutral-400 mb-8 text-center leading-relaxed font-inter">Please enter your TMDB API Key.<br />Get it for free at <a href="https://www.themoviedb.org/settings/api" target="_blank" className="text-white underline font-bold">The Movie DB</a>.</p>
+                                <input type="password" placeholder="Paste API Key here..." value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="w-full bg-black border border-white/10 rounded-2xl p-5 mb-8 focus:ring-1 focus:ring-white outline-none transition-all text-center" />
+                                <button onClick={() => saveApiKey(apiKey)} className="w-full py-5 bg-white text-black rounded-2xl font-bold uppercase active:scale-95">GET STARTED</button>
                             </div>
                         </div>
                     )}
 
-                    {/* PREVIEW & RENDER MODAL */}
                     {selectedItem && (
-                        <div className="fixed inset-0 z-40 bg-black/90 backdrop-blur-lg flex flex-col items-center justify-center p-4 overflow-y-auto">
-
-                            <button 
-                                onClick={() => setSelectedItem(null)} 
-                                className="absolute top-8 right-6 p-3 bg-white/10 rounded-full hover:bg-white/20 transition-all z-50 backdrop-blur-md"
-                            >
-                                <Icon name="x" size={24} />
-                            </button>
+                        <div className="fixed inset-0 z-40 bg-black/95 backdrop-blur-lg flex flex-col items-center justify-center p-4 overflow-y-auto">
+                            <button onClick={() => setSelectedItem(null)} className="absolute top-8 right-6 p-3 bg-white/10 rounded-full hover:bg-white/20 transition-all z-50"><Icon name="x" size={24} /></button>
                             
-                            <div className="w-full max-w-sm flex flex-col gap-6 my-auto py-10 animate-slide-up mt-12">
-                                
-                                {/* CARD PREVIEW */}
-                                <div 
-                                    className="relative aspect-[9/16] w-full rounded-[3rem] overflow-hidden border border-white/10 shadow-[0_0_100px_rgba(255,255,255,0.05)] transition-colors duration-300"
-                                    style={{ backgroundColor: bgColor }}
-                                >
-                                    <img 
-                                        src={selectedItem.backdrop_path ? `https://image.tmdb.org/t/p/w780${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${selectedItem.poster_path}`} 
-                                        className="absolute inset-0 w-full h-full object-cover blur-2xl scale-125 transition-opacity" 
-                                        style={{ opacity: 0.45 }}
-                                        alt=""
-                                    />
-                                    <div 
-                                        className="absolute inset-0 transition-colors"
-                                        style={{ background: `linear-gradient(to bottom, rgba(${hexToRgb(bgColor)}, ${bgOpacity * 0.1}), rgba(${hexToRgb(bgColor)}, ${bgOpacity}))` }}
-                                    ></div>
+                            <div className="w-full max-w-sm flex flex-col gap-6 my-auto py-10 animate-slide-up mt-12 scale-[0.95] sm:scale-100 origin-center">
+                                {/* CARD PREVIEW AREA - 1:1 Aspect Ratio logic */}
+                                <div className="relative aspect-[9/16] w-full rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl bg-neutral-950" style={{ backgroundColor: bgColor }}>
+                                    <div className="absolute inset-0 transition-opacity" style={{ opacity: 0.45 }}>
+                                        <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/t/p/w780${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${selectedItem.poster_path}`} className="absolute inset-0 w-full h-full object-cover blur-2xl scale-125" alt="" />
+                                    </div>
+                                    <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, rgba(${hexToRgb(bgColor)}, ${bgOpacity * 0.1}), rgba(${hexToRgb(bgColor)}, ${bgOpacity}))` }}></div>
                                     
-                                    <div className="absolute inset-0 flex flex-col items-center pt-16 px-8">
-                                        <div className="w-[85%] aspect-[2/3] rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl shrink-0">
-                                            <img 
-                                                src={`${TMDB_IMAGE_BASE}${selectedItem.poster_path}`} 
-                                                className="w-full h-full object-cover" 
-                                                alt="Poster Preview"
-                                            />
+                                    <div className="absolute inset-0 flex flex-col items-center">
+                                        {/* Poster Position matching Canvas precisely (py=200/1920 = 10.41%) */}
+                                        <div className="w-[59.25%] aspect-[2/3] rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl mt-[10.41%] shrink-0">
+                                            <img src={`${TMDB_IMAGE_BASE}${selectedItem.poster_path}`} className="w-full h-full object-cover" alt="Poster Preview" />
                                         </div>
                                         
-                                        {/* Wrapp text with flex-grow and center alignment to balance it perfectly */}
-                                        <div className="text-center w-full px-2 flex flex-col items-center justify-center flex-grow mb-16">
-                                            <h3 className="text-4xl font-light mb-5 leading-tight line-clamp-2 uppercase text-white font-oswald drop-shadow-md" style={{ textWrap: 'balance' }}>
+                                        {/* Text Section mimicking Canvas textY and spacings */}
+                                        <div className="text-center w-full px-10 flex flex-col items-center justify-center flex-grow mb-[15%]">
+                                            <h3 className="text-[1.85rem] font-light leading-tight uppercase text-white font-oswald drop-shadow-md mb-[5%]" style={{ textWrap: 'balance' }}>
                                                 {(selectedItem.title || selectedItem.name)}
                                             </h3>
                                             
-                                            {/* Rounded Details Box matching Canvas */}
-                                            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-full font-inter border border-white/15">
-                                                <span className="text-white text-sm font-medium">{(selectedItem.release_date || selectedItem.first_air_date || '').split('-')[0]}</span>
-                                                <span className="w-1 h-1 bg-white/40 rounded-full"></span>
-                                                <span className="text-yellow-400 text-sm font-medium">★ {selectedItem.vote_average?.toFixed(1)}</span>
-                                                <span className="w-1 h-1 bg-white/40 rounded-full"></span>
-                                                <span className="text-white/60 text-sm font-medium">{selectedItem.media_type === 'movie' || selectedItem.title ? 'MOVIE' : 'SERIES'}</span>
+                                            {/* Details Box matching Canvas style & position */}
+                                            <div className="inline-flex items-center gap-[4%] bg-white/10 backdrop-blur-md px-6 py-2.5 rounded-full font-inter border border-white/15 whitespace-nowrap shadow-sm">
+                                                <span className="text-white text-[0.8rem] font-medium tracking-tight">{(selectedItem.release_date || selectedItem.first_air_date || '').split('-')[0]}</span>
+                                                <span className="w-1 h-1 bg-white/40 rounded-full shrink-0"></span>
+                                                <span className="text-yellow-400 text-[0.8rem] font-bold tracking-tight">★ {selectedItem.vote_average?.toFixed(1)}</span>
+                                                <span className="w-1 h-1 bg-white/40 rounded-full shrink-0"></span>
+                                                <span className="text-white/60 text-[0.8rem] font-medium uppercase tracking-tight">{selectedItem.media_type === 'movie' || selectedItem.title ? 'MOVIE' : 'SERIES'}</span>
                                             </div>
                                         </div>
-                                    </div>
-                                    
-                                    {/* PREVIEW CARD FOOTER */}
-                                    <div className="absolute bottom-10 w-full flex flex-col items-center opacity-70">
-                                        <img src="render.png" className="h-6 w-auto object-contain px-8" alt="render-footer" />
+
+                                        <div className="absolute bottom-[7%] w-full flex flex-col items-center opacity-70">
+                                            <img src="render.png" className="h-5 w-auto object-contain px-8" alt="render-footer" style={{ opacity: 0.2 }} />
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div className="flex flex-col gap-3 w-full">
-                                    {/* Editor Toolkit: Color Picker & Opacity Slider */}
                                     <div className="flex items-center justify-between bg-white/5 backdrop-blur-xl px-6 py-4 rounded-[2rem] border border-white/10 shadow-xl w-full">
                                         <div className="flex items-center gap-3">
                                             <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white shadow-lg shrink-0">
-                                                <input 
-                                                    type="color" 
-                                                    value={bgColor} 
-                                                    onChange={(e) => setBgColor(e.target.value)} 
-                                                    className="absolute -top-2 -left-2 w-12 h-12 cursor-pointer"
-                                                />
+                                                <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="absolute -top-2 -left-2 w-12 h-12 cursor-pointer" />
                                             </div>
-                                            <span className="text-xs font-bold font-inter text-neutral-300 tracking-wider">COLOR</span>
+                                            <span className="text-xs font-bold text-neutral-300 tracking-wider uppercase">Color</span>
                                         </div>
-                                        <div className="w-[1px] h-6 bg-white/20 hidden sm:block"></div>
+                                        <div className="w-[1px] h-6 bg-white/20"></div>
                                         <div className="flex items-center gap-3">
-                                            <span className="text-xs font-bold font-inter text-neutral-300 tracking-wider hidden sm:block">OPACITY</span>
-                                            <input 
-                                                type="range" 
-                                                min="0" 
-                                                max="1" 
-                                                step="0.05" 
-                                                value={bgOpacity} 
-                                                onChange={(e) => setBgOpacity(parseFloat(e.target.value))} 
-                                                className="w-20 md:w-28 accent-white cursor-pointer"
-                                            />
+                                            <span className="text-xs font-bold text-neutral-300 tracking-wider hidden sm:block uppercase">Opacity</span>
+                                            <input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-20 md:w-28 accent-white cursor-pointer" />
                                         </div>
                                     </div>
 
-                                    <button 
-                                        onClick={() => handleShare(selectedItem)} 
-                                        disabled={generating} 
-                                        className="relative w-full py-5 bg-white text-black rounded-[2rem] font-bold text-xl active:scale-95 transition-all shadow-2xl hover:bg-neutral-100 uppercase flex items-center justify-center gap-3 overflow-hidden font-inter"
-                                    >
-                                        {generating ? (
-                                            <>
-                                                <div className="w-6 h-6 border-4 border-black/20 border-t-black rounded-full animate-spin"></div>
-                                                <span>Processing...</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Icon name="share" size={24} />
-                                                <span>Share to Story</span>
-                                            </>
-                                        )}
+                                    <button onClick={() => handleShare(selectedItem)} disabled={generating} className="relative w-full py-5 bg-white text-black rounded-[2rem] font-bold text-xl active:scale-95 transition-all shadow-2xl uppercase flex items-center justify-center gap-3 overflow-hidden">
+                                        {generating ? (<div className="w-6 h-6 border-4 border-black/20 border-t-black rounded-full animate-spin"></div>) : (<><Icon name="share" size={24} /><span>Share to Story</span></>)}
                                     </button>
                                 </div>
                             </div>
                         </div>
                     )}
                     
-                    {/* FLYING "ADD TO HOMESCREEN" BUTTON */}
-                    {installPrompt && (
-                        <button 
-                            onClick={async () => {
-                                installPrompt.prompt();
-                                const { outcome } = await installPrompt.userChoice;
-                                if (outcome === 'accepted') setInstallPrompt(null);
-                            }}
-                            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center bg-white text-black px-8 py-4 rounded-full font-bold shadow-[0_10px_40px_rgba(255,255,255,0.3)] hover:scale-105 active:scale-95 transition-all font-oswald uppercase tracking-wider animate-slide-up whitespace-nowrap"
-                        >
+                    {installPrompt && !selectedItem && (
+                        <button onClick={async () => { installPrompt.prompt(); const { outcome } = await installPrompt.userChoice; if (outcome === 'accepted') setInstallPrompt(null); }} className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center bg-white text-black px-6 py-3 rounded-full shadow-2xl hover:scale-105 active:scale-95 transition-all font-oswald font-light text-sm uppercase tracking-widest animate-slide-up whitespace-nowrap">
                             <span>ADD TO HOMESCREEN</span>
                         </button>
                     )}
-
                     <canvas ref={canvasRef} className="hidden"></canvas>
                 </div>
             );
