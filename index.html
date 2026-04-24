@@ -30,7 +30,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React & ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="htts://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
@@ -384,24 +384,25 @@
 
             return (
                 <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black flex flex-col font-inter relative">
-                    <header className="sticky top-0 z-30 bg-black/90 backdrop-blur-xl px-4 py-4 flex items-center justify-between border-b border-white/10">
-                        <div className="flex items-center h-8 sm:h-10">
-                            {/* Updated Logo with header.png */}
-                            <img src="header.png" alt="WatchShare" className="h-5 sm:h-6 w-auto object-contain" />
+                    {/* Bigger Header */}
+                    <header className="sticky top-0 z-30 bg-black/90 backdrop-blur-xl px-6 py-5 flex items-center justify-between border-b border-white/10">
+                        <div className="flex items-center h-10 sm:h-12">
+                            {/* Updated Logo size */}
+                            <img src="header.png" alt="WatchShare" className="h-6 sm:h-8 w-auto object-contain" />
                         </div>
                         <div className="flex items-center gap-2">
                             {/* Donate Button: Support via Ko-fi */}
                             <a 
                                 href="https://ko-fi.com/mchammadr_" 
                                 target="_blank" 
-                                className="flex items-center gap-2 px-3 py-2 bg-pink-600/20 hover:bg-pink-600/30 text-pink-400 rounded-full border border-pink-500/30 transition-all text-[10px] sm:text-xs font-bold"
+                                className="flex items-center gap-2 px-4 py-2.5 bg-pink-600/20 hover:bg-pink-600/30 text-pink-400 rounded-full border border-pink-500/30 transition-all text-[11px] sm:text-xs font-bold"
                             >
-                                <Icon name="heart" size={14} className="fill-pink-400" />
+                                <Icon name="heart" size={16} className="fill-pink-400" />
                                 <span className="hidden sm:inline">Support via Ko-fi</span>
                                 <span className="sm:hidden">Support</span>
                             </a>
-                            <button onClick={() => setShowSettings(true)} className="p-2.5 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
-                                <Icon name="settings" size={20} className="text-neutral-300" />
+                            <button onClick={() => setShowSettings(true)} className="p-3 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
+                                <Icon name="settings" size={22} className="text-neutral-300" />
                             </button>
                         </div>
                     </header>
@@ -471,10 +472,12 @@
                     )}
 
                     {selectedItem && (
-                        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-lg flex flex-col items-center justify-center p-4 overflow-y-auto">
-                            <button onClick={() => {setSelectedItem(null); setSeason(1); setEpisode(1); setTvDetails({ seasons: [] });}} className="absolute top-8 right-6 p-3 bg-white/10 rounded-full hover:bg-white/20 transition-all z-50"><Icon name="x" size={24} /></button>
+                        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-lg flex flex-col items-center justify-start p-4 overflow-y-auto">
+                            {/* Adjusted Close Button Position */}
+                            <button onClick={() => {setSelectedItem(null); setSeason(1); setEpisode(1); setTvDetails({ seasons: [] });}} className="absolute top-6 right-6 p-3 bg-white/10 rounded-full hover:bg-white/20 transition-all z-50"><Icon name="x" size={24} /></button>
                             
-                            <div className="w-full max-w-sm flex flex-col gap-6 my-auto py-10 animate-slide-up mt-12 scale-[0.95] sm:scale-100 origin-center">
+                            {/* Improved scale and spacing for Share Preview */}
+                            <div className="w-full max-w-sm flex flex-col gap-6 pt-16 pb-12 animate-slide-up scale-[0.9] sm:scale-100 origin-top">
                                 {/* CARD PREVIEW AREA */}
                                 <div className="relative aspect-[9/16] w-full rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl bg-neutral-950" style={{ backgroundColor: bgColor }}>
                                     <div className="absolute inset-0 transition-opacity" style={{ opacity: 0.45 }}>
@@ -522,7 +525,6 @@
                                                     <Icon name="tv" size={16} className="text-neutral-400" />
                                                     <span className="text-xs font-bold text-neutral-300 uppercase font-inter tracking-wide">TV Details</span>
                                                 </div>
-                                                {/* Toggle Season/Episode Display */}
                                                 <label className="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" className="sr-only peer" checked={showSeasonEpisode} onChange={() => setShowSeasonEpisode(!showSeasonEpisode)} />
                                                     <div className="w-11 h-6 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
