@@ -105,4 +105,333 @@
             const [error, setError] = useState(null);
             const [generating, setGenerating] = useState(false);
             const [bgColor, setBgColor] = useState('#000000');
-            const [bgOpacity
+            const [bgOpacity, setBgOpacity] = useState(0); // Default set to 0
+            const [showAllMovies, setShowAllMovies] = useState(false);
+            const [showAllSeries, setShowAllSeries] = useState(false);
+            const [hasSearched, setHasSearched] = useState(false);
+            const [installPrompt, setInstallPrompt] = useState(null);
+            const canvasRef = useRef(null);
+
+            useEffect(() => {
+                const handleBeforeInstall = (e) => {
+                    e.preventDefault();
+                    setInstallPrompt(e);
+                };
+                window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+                return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+            }, []);
+
+            const saveApiKey = (key) => {
+                setApiKey(key);
+                localStorage.setItem('tmdb_key', key);
+                setShowSettings(false);
+                setError(null);
+            };
+
+            const searchAll = async (e) => {
+                if (e) e.preventDefault();
+                if (!query || !apiKey) return;
+                setLoading(true);
+                setError(null);
+                setHasSearched(false);
+                try {
+                    const [movieRes, tvRes] = await Promise.all([
+                        fetch(`https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US&page=1`),
+                        fetch(`https://api.themoviedb.org/3/search/tv?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US&page=1`)
+                    ]);
+                    if (movieRes.status === 401) throw new Error("Invalid API Key.");
+                    const movieData = await movieRes.json();
+                    const tvData = await tvRes.json();
+                    setMovies((movieData.results || []).filter(i => i.poster_path).slice(0, 20));
+                    setSeries((tvData.results || []).filter(i => i.poster_path).slice(0, 20));
+                } catch (err) { setError(err.message); }
+                finally { setLoading(false); setHasSearched(true); }
+            };
+
+            const getBalancedLines = (ctx, text, maxWidth) => {
+                const words = text.split(' ');
+                let line = '';
+                let lines = [];
+                for (let n = 0; n < words.length; n++) {
+                    let testLine = line + words[n] + ' ';
+                    if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+                        lines.push(line.trim());
+                        line = words[n] + ' ';
+                    } else { line = testLine; }
+                }
+                lines.push(line.trim());
+                if (lines.length === 2) {
+                    let lastLineWords = lines[1].split(' ');
+                    let prevLineWords = lines[0].split(' ');
+                    if (lastLineWords.length === 1 && prevLineWords.length > 1) {
+                        let movedWord = prevLineWords.pop();
+                        lines[0] = prevLineWords.join(' ');
+                        lines[1] = movedWord + ' ' + lastLineWords[0];
+                    }
+                }
+                return lines.slice(0, 2);
+            };
+
+            const generateStoryImage = async (item) => {
+                setGenerating(true);
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                canvas.width = 1080;
+                canvas.height = 1920;
+
+                const drawRoundedRect = (x, y, w, h, r) => {
+                    ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.closePath();
+                };
+
+                try {
+                    ctx.fillStyle = bgColor;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    const bgImagePath = item.backdrop_path 
+                        ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}?canvas=true`
+                        : `${TMDB_IMAGE_BASE}${item.poster_path}?canvas=true`;
+
+                    const bgImg = new Image();
+                    bgImg.crossOrigin = "anonymous";
+                    bgImg.src = bgImagePath;
+                    await new Promise(r => { bgImg.onload = r; bgImg.onerror = r; });
+                    if (bgImg.complete) {
+                        ctx.save();
+                        ctx.globalAlpha = 0.45;
+                        ctx.filter = 'blur(25px)';
+                        const scale = Math.max(canvas.width / bgImg.width, canvas.height / bgImg.height);
+                        const x = (canvas.width / 2) - (bgImg.width / 2) * scale;
+                        const y = (canvas.height / 2) - (bgImg.height / 2) * scale;
+                        ctx.drawImage(bgImg, x, y, bgImg.width * scale, bgImg.height * scale);
+                        ctx.restore();
+                    }
+
+                    const rgbColor = hexToRgb(bgColor);
+                    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                    grad.addColorStop(0, `rgba(${rgbColor}, ${bgOpacity * 0.1})`);
+                    grad.addColorStop(1, `rgba(${rgbColor}, ${bgOpacity})`);
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    const img = new Image();
+                    img.crossOrigin = "anonymous";
+                    img.src = `${TMDB_IMAGE_BASE}${item.poster_path}?canvas=true`;
+                    await new Promise(r => { img.onload = r; img.onerror = r; });
+                    if (img.complete) {
+                        const pw = 640, ph = 960, px = (canvas.width - pw) / 2, py = 200, radius = 45;
+                        ctx.save();
+                        ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 70; ctx.shadowOffsetY = 30;
+                        drawRoundedRect(px, py, pw, ph, radius);
+                        ctx.clip();
+                        ctx.drawImage(img, px, py, pw, ph);
+                        ctx.restore();
+                    }
+
+                    ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
+                    const title = (item.title || item.name).toUpperCase();
+                    ctx.font = '300 70px Oswald, sans-serif';
+                    const lines = getBalancedLines(ctx, title, 900);
+                    let textY = lines.length === 1 ? 1330 : 1290;
+                    ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 15; ctx.shadowOffsetY = 5;
+                    lines.forEach(l => { ctx.fillText(l.trim(), canvas.width / 2, textY); textY += 85; });
+                    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+                    ctx.font = '500 34px Inter, sans-serif';
+                    const yearTxt = (item.release_date || item.first_air_date || 'N/A').split('-')[0];
+                    const ratingTxt = `★ ${item.vote_average.toFixed(1)}`;
+                    const typeTxt = item.media_type === 'movie' || item.title ? 'MOVIE' : 'SERIES';
+                    const yearW = ctx.measureText(yearTxt).width, ratingW = ctx.measureText(ratingTxt).width, typeW = ctx.measureText(typeTxt).width;
+                    const dotSpace = 44, totalTextW = yearW + ratingW + typeW + (dotSpace * 2);
+                    const boxW = totalTextW + 90, boxH = 72, boxX = (canvas.width - boxW) / 2, boxY = textY - 5, boxRadius = 36;
+
+                    ctx.save();
+                    drawRoundedRect(boxX, boxY, boxW, boxH, boxRadius);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; ctx.fill();
+                    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; ctx.stroke();
+                    ctx.restore();
+
+                    let currentX = boxX + 45; const textBaselineY = boxY + boxH / 2 + 2;
+                    ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+                    ctx.fillStyle = '#ffffff'; ctx.fillText(yearTxt, currentX, textBaselineY); currentX += yearW + dotSpace/2;
+                    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.beginPath(); ctx.arc(currentX, textBaselineY, 4.5, 0, Math.PI * 2); ctx.fill(); currentX += dotSpace/2;
+                    ctx.fillStyle = '#facc15'; ctx.fillText(ratingTxt, currentX, textBaselineY); currentX += ratingW + dotSpace/2;
+                    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.beginPath(); ctx.arc(currentX, textBaselineY, 4.5, 0, Math.PI * 2); ctx.fill(); currentX += dotSpace/2;
+                    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillText(typeTxt, currentX, textBaselineY); ctx.restore();
+
+                    const attrImg = new Image(); attrImg.src = 'render.png';
+                    await new Promise(r => { attrImg.onload = r; attrImg.onerror = r; });
+                    if (attrImg.complete) {
+                        const aWidth = 540, aHeight = (attrImg.height / attrImg.width) * aWidth;
+                        ctx.save(); ctx.globalAlpha = 0.2;
+                        ctx.drawImage(attrImg, (canvas.width - aWidth) / 2, 1780 - (aHeight / 2), aWidth, aHeight);
+                        ctx.restore();
+                    }
+
+                    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.95));
+                    setGenerating(false); return blob;
+                } catch (e) { console.error(e); setGenerating(false); }
+            };
+
+            const handleShare = async (item) => {
+                const blob = await generateStoryImage(item);
+                if (!blob) return;
+                const file = new File([blob], `watchshare-${item.id}.jpg`, { type: 'image/jpeg' });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try { await navigator.share({ files: [file], title: item.title || item.name }); }
+                    catch (err) { downloadImage(blob, item.title || item.name); }
+                } else { downloadImage(blob, item.title || item.name); }
+            };
+
+            const downloadImage = (blob, title) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = `watchshare-${title.toLowerCase().replace(/\s+/g, '-')}.jpg`; a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            const PosterItem = ({ item }) => (
+                <div onClick={() => setSelectedItem(item)} className="group relative aspect-[2/3] bg-neutral-900 rounded-2xl overflow-hidden cursor-pointer border border-white/5 hover:border-white/20 transition-all transform active:scale-95">
+                    <img src={`${TMDB_IMAGE_BASE}${item.poster_path}`} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" alt={item.title || item.name} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent p-4 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                        <p className="text-xs font-oswald font-light leading-tight uppercase">{item.title || item.name}</p>
+                        <p className="text-[10px] text-yellow-500 mt-1 font-inter">★ {item.vote_average?.toFixed(1)}</p>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black flex flex-col font-inter">
+                    <header className="sticky top-0 z-30 bg-black/90 backdrop-blur-xl px-6 py-4 flex items-center justify-between border-b border-white/10">
+                        <div className="flex items-center h-8 sm:h-10">
+                            <img src="logo.png" alt="WatchShare" className="h-5 sm:h-6 w-auto object-contain" />
+                        </div>
+                        <button onClick={() => setShowSettings(true)} className="p-2.5 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
+                            <Icon name="settings" size={20} className="text-neutral-300" />
+                        </button>
+                    </header>
+
+                    <main className="max-w-4xl mx-auto p-6 flex-grow w-full">
+                        <form onSubmit={searchAll} className="relative mb-12 mt-2">
+                            <input type="text" placeholder="Search for movies or tv series..." value={query} onChange={(e) => { setQuery(e.target.value); setHasSearched(false); }} className="w-full bg-neutral-900/50 border border-white/10 rounded-3xl py-5 pl-14 pr-6 focus:ring-1 focus:ring-white outline-none text-lg transition-all shadow-2xl font-inter" />
+                            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-400"><Icon name="search" size={22} /></div>
+                        </form>
+
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center py-24 gap-4"><div className="w-12 h-12 border-2 border-white border-t-transparent rounded-full animate-spin"></div><p className="text-neutral-500 text-sm font-medium uppercase tracking-widest">Fetching data...</p></div>
+                        ) : error ? (
+                            <div className="text-center py-20 bg-red-900/10 border border-red-500/20 rounded-[2rem] px-6"><Icon name="alert-circle" size={48} className="mx-auto mb-4 text-red-500" /><h3 className="text-xl font-oswald font-light text-red-500 mb-2 uppercase">Error</h3><p className="text-neutral-400 mb-6 font-inter">{error}</p><button onClick={() => setShowSettings(true)} className="px-6 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all active:scale-95">Fix API Key</button></div>
+                        ) : (
+                            <div className="space-y-16 pb-20">
+                                {movies.length > 0 && (
+                                    <section>
+                                        <div className="flex justify-between items-end mb-6"><h2 className="text-2xl font-oswald font-light uppercase tracking-wide">Movies</h2>{movies.length > 4 && <button onClick={() => setShowAllMovies(!showAllMovies)} className="text-xs font-inter font-bold text-neutral-400 hover:text-white uppercase tracking-wider transition-colors pb-1">{showAllMovies ? 'Show Less' : 'Show All'}</button>}</div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">{(showAllMovies ? movies : movies.slice(0, 4)).map(item => <PosterItem key={`movie-${item.id}`} item={item} />)}</div>
+                                    </section>
+                                )}
+                                {series.length > 0 && (
+                                    <section>
+                                        <div className="flex justify-between items-end mb-6"><h2 className="text-2xl font-oswald font-light uppercase tracking-wide">TV Series</h2>{series.length > 4 && <button onClick={() => setShowAllSeries(!showAllSeries)} className="text-xs font-inter font-bold text-neutral-400 hover:text-white uppercase tracking-wider transition-colors pb-1">{showAllSeries ? 'Show Less' : 'Show All'}</button>}</div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">{(showAllSeries ? series : series.slice(0, 4)).map(item => <PosterItem key={`tv-${item.id}`} item={item} />)}</div>
+                                    </section>
+                                )}
+                                {!loading && hasSearched && query && movies.length === 0 && series.length === 0 && !error && (<div className="text-center py-20 text-neutral-500 font-inter">No results found for "{query}".</div>)}
+                                {!query && !error && (<div className="text-center py-24 opacity-20"><Icon name="monitor-play" size={80} className="mx-auto mb-4" /><p className="text-xl font-oswald font-light uppercase tracking-widest">Start Searching</p></div>)}
+                            </div>
+                        )}
+                    </main>
+
+                    <footer className="py-10 border-t border-white/5 flex flex-col items-center gap-4 bg-black">
+                        <img src="attribution.png" className="h-6 w-auto opacity-50 grayscale hover:opacity-100 hover:grayscale-0 transition-all" alt="TMDB Attribution" />
+                        <p className="text-[10px] text-neutral-600 font-medium px-6 text-center">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+                    </footer>
+
+                    {showSettings && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/95 backdrop-blur-md transition-opacity">
+                            <div className="bg-neutral-900 w-full max-w-sm rounded-[2.5rem] p-10 border border-white/10 shadow-2xl animate-slide-up">
+                                <div className="flex justify-center mb-8"><img src="logo.png" className="h-12 w-auto" alt="Logo" /></div>
+                                <h2 className="text-2xl font-oswald font-light mb-3 text-center uppercase">API Setup</h2>
+                                <p className="text-sm text-neutral-400 mb-8 text-center leading-relaxed font-inter">Please enter your TMDB API Key.<br />Get it for free at <a href="https://www.themoviedb.org/settings/api" target="_blank" className="text-white underline font-bold">The Movie DB</a>.</p>
+                                <input type="password" placeholder="Paste API Key here..." value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="w-full bg-black border border-white/10 rounded-2xl p-5 mb-8 focus:ring-1 focus:ring-white outline-none transition-all text-center" />
+                                <button onClick={() => saveApiKey(apiKey)} className="w-full py-5 bg-white text-black rounded-2xl font-bold uppercase active:scale-95">GET STARTED</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {selectedItem && (
+                        <div className="fixed inset-0 z-40 bg-black/95 backdrop-blur-lg flex flex-col items-center justify-center p-4 overflow-y-auto">
+                            <button onClick={() => setSelectedItem(null)} className="absolute top-8 right-6 p-3 bg-white/10 rounded-full hover:bg-white/20 transition-all z-50"><Icon name="x" size={24} /></button>
+                            
+                            <div className="w-full max-w-sm flex flex-col gap-6 my-auto py-10 animate-slide-up mt-12 scale-[0.95] sm:scale-100 origin-center">
+                                {/* CARD PREVIEW AREA - 1:1 Aspect Ratio logic */}
+                                <div className="relative aspect-[9/16] w-full rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl bg-neutral-950" style={{ backgroundColor: bgColor }}>
+                                    <div className="absolute inset-0 transition-opacity" style={{ opacity: 0.45 }}>
+                                        <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/t/p/w780${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${selectedItem.poster_path}`} className="absolute inset-0 w-full h-full object-cover blur-2xl scale-125" alt="" />
+                                    </div>
+                                    <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, rgba(${hexToRgb(bgColor)}, ${bgOpacity * 0.1}), rgba(${hexToRgb(bgColor)}, ${bgOpacity}))` }}></div>
+                                    
+                                    <div className="absolute inset-0 flex flex-col items-center">
+                                        {/* Poster Position matching Canvas precisely (py=200/1920 = 10.41%) */}
+                                        <div className="w-[59.25%] aspect-[2/3] rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl mt-[10.41%] shrink-0">
+                                            <img src={`${TMDB_IMAGE_BASE}${selectedItem.poster_path}`} className="w-full h-full object-cover" alt="Poster Preview" />
+                                        </div>
+                                        
+                                        {/* Text Section mimicking Canvas textY and spacings */}
+                                        <div className="text-center w-full px-10 flex flex-col items-center justify-center flex-grow mb-[15%]">
+                                            <h3 className="text-[1.85rem] font-light leading-tight uppercase text-white font-oswald drop-shadow-md mb-[5%]" style={{ textWrap: 'balance' }}>
+                                                {(selectedItem.title || selectedItem.name)}
+                                            </h3>
+                                            
+                                            {/* Details Box matching Canvas style & position */}
+                                            <div className="inline-flex items-center gap-[4%] bg-white/10 backdrop-blur-md px-6 py-2.5 rounded-full font-inter border border-white/15 whitespace-nowrap shadow-sm">
+                                                <span className="text-white text-[0.8rem] font-medium tracking-tight">{(selectedItem.release_date || selectedItem.first_air_date || '').split('-')[0]}</span>
+                                                <span className="w-1 h-1 bg-white/40 rounded-full shrink-0"></span>
+                                                <span className="text-yellow-400 text-[0.8rem] font-bold tracking-tight">★ {selectedItem.vote_average?.toFixed(1)}</span>
+                                                <span className="w-1 h-1 bg-white/40 rounded-full shrink-0"></span>
+                                                <span className="text-white/60 text-[0.8rem] font-medium uppercase tracking-tight">{selectedItem.media_type === 'movie' || selectedItem.title ? 'MOVIE' : 'SERIES'}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="absolute bottom-[7%] w-full flex flex-col items-center opacity-70">
+                                            <img src="render.png" className="h-5 w-auto object-contain px-8" alt="render-footer" style={{ opacity: 0.2 }} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col gap-3 w-full">
+                                    <div className="flex items-center justify-between bg-white/5 backdrop-blur-xl px-6 py-4 rounded-[2rem] border border-white/10 shadow-xl w-full">
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white shadow-lg shrink-0">
+                                                <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="absolute -top-2 -left-2 w-12 h-12 cursor-pointer" />
+                                            </div>
+                                            <span className="text-xs font-bold text-neutral-300 tracking-wider uppercase">Color</span>
+                                        </div>
+                                        <div className="w-[1px] h-6 bg-white/20"></div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs font-bold text-neutral-300 tracking-wider hidden sm:block uppercase">Opacity</span>
+                                            <input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-20 md:w-28 accent-white cursor-pointer" />
+                                        </div>
+                                    </div>
+
+                                    <button onClick={() => handleShare(selectedItem)} disabled={generating} className="relative w-full py-5 bg-white text-black rounded-[2rem] font-bold text-xl active:scale-95 transition-all shadow-2xl uppercase flex items-center justify-center gap-3 overflow-hidden">
+                                        {generating ? (<div className="w-6 h-6 border-4 border-black/20 border-t-black rounded-full animate-spin"></div>) : (<><Icon name="share" size={24} /><span>Share to Story</span></>)}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {installPrompt && !selectedItem && (
+                        <button onClick={async () => { installPrompt.prompt(); const { outcome } = await installPrompt.userChoice; if (outcome === 'accepted') setInstallPrompt(null); }} className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center bg-white text-black px-6 py-3 rounded-full shadow-2xl hover:scale-105 active:scale-95 transition-all font-oswald font-normal text-sm uppercase tracking-widest animate-slide-up whitespace-nowrap">
+                            <span>ADD TO HOMESCREEN</span>
+                        </button>
+                    )}
+                    <canvas ref={canvasRef} className="hidden"></canvas>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
