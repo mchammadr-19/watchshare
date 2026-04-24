@@ -4,6 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WatchShare - Story Canvas Editor</title>
+    
+    <!-- PWA Mini Icon & Dynamic Manifest -->
+    <link rel="icon" type="image/png" href="icon.png">
+    <script>
+        const manifest = {
+            "name": "WatchShare",
+            "short_name": "WatchShare",
+            "display": "standalone",
+            "background_color": "#000000",
+            "theme_color": "#000000",
+            "start_url": "./",
+            "icons": [{ "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }]
+        };
+        const manifestUrl = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
+        document.write('<link rel="manifest" href="' + manifestUrl + '">');
+        
+        // Dummy Service Worker untuk memicu trigger "Add to Homescreen" di browser
+        if ('serviceWorker' in navigator) {
+            const swBlob = new Blob(["self.addEventListener('fetch', function(e) {});"], { type: 'application/javascript' });
+            navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
+        }
+    </script>
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React & ReactDOM -->
@@ -104,6 +127,7 @@
             const [showAllMovies, setShowAllMovies] = useState(false);
             const [showAllSeries, setShowAllSeries] = useState(false);
             const [hasSearched, setHasSearched] = useState(false);
+            const [installPrompt, setInstallPrompt] = useState(null); // State for PWA Install
             const canvasRef = useRef(null);
 
             // Preload Fonts to ensure Canvas uses them
@@ -111,6 +135,15 @@
                 document.fonts.ready.then(() => {
                     console.log("Fonts loaded.");
                 });
+
+                // Menangkap event install PWA dari browser
+                const handleBeforeInstall = (e) => {
+                    e.preventDefault();
+                    setInstallPrompt(e);
+                };
+                window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+
+                return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
             }, []);
 
             const saveApiKey = (key) => {
@@ -371,15 +404,15 @@
 
                     // 7. Draw Attribution ON CANVAS OUTPUT
                     const attrImg = new Image();
-                    attrImg.src = 'attribution.png';
+                    attrImg.src = 'render.png';
                     await new Promise(r => { attrImg.onload = r; attrImg.onerror = r; });
                     if (attrImg.complete && attrImg.naturalWidth > 0) {
-                        const aWidth = 320; 
+                        const aWidth = 540; // Diperbesar karena logo baru lebih panjang ke samping
                         const aHeight = (attrImg.height / attrImg.width) * aWidth;
                         const ax = (canvas.width - aWidth) / 2;
-                        const ay = 1750; 
+                        const ay = 1780 - (aHeight / 2); // Posisi Y disesuaikan ke tengah bawah
                         ctx.save();
-                        ctx.globalAlpha = 0.6; 
+                        ctx.globalAlpha = 0.2; // Opacity diubah menjadi 20%
                         ctx.drawImage(attrImg, ax, ay, aWidth, aHeight);
                         ctx.restore();
                     }
@@ -433,8 +466,9 @@
             return (
                 <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black flex flex-col font-inter">
                     <header className="sticky top-0 z-30 bg-black/90 backdrop-blur-xl px-6 py-4 flex items-center justify-between border-b border-white/10">
-                        <div className="flex items-center h-8 sm:h-10">
-                            <img src="logo.png" alt="WatchShare" className="h-full w-auto object-contain" />
+                        <div className="flex items-center h-8 sm:h-10 gap-3">
+                            <img src="icon.png" alt="Icon" className="h-full w-auto object-contain rounded-lg" />
+                            <img src="logo.png" alt="WatchShare" className="h-5 sm:h-6 w-auto object-contain" />
                         </div>
                         <button 
                             onClick={() => setShowSettings(true)} 
@@ -628,8 +662,8 @@
                                     </div>
                                     
                                     {/* PREVIEW CARD FOOTER */}
-                                    <div className="absolute bottom-10 w-full flex flex-col items-center opacity-60">
-                                        <img src="attribution.png" className="h-5 w-auto object-contain" alt="tmdb-attr" />
+                                    <div className="absolute bottom-10 w-full flex flex-col items-center opacity-70">
+                                        <img src="render.png" className="h-6 w-auto object-contain px-8" alt="render-footer" />
                                     </div>
                                 </div>
 
@@ -684,6 +718,21 @@
                         </div>
                     )}
                     
+                    {/* FLYING "ADD TO HOMESCREEN" BUTTON */}
+                    {installPrompt && (
+                        <button 
+                            onClick={async () => {
+                                installPrompt.prompt();
+                                const { outcome } = await installPrompt.userChoice;
+                                if (outcome === 'accepted') setInstallPrompt(null);
+                            }}
+                            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-white text-black px-6 py-3.5 rounded-full font-bold shadow-[0_10px_40px_rgba(255,255,255,0.3)] hover:scale-105 active:scale-95 transition-all font-inter animate-slide-up whitespace-nowrap"
+                        >
+                            <img src="icon.png" className="w-6 h-6 object-contain" alt="app icon" />
+                            <span>Add to Homescreen</span>
+                        </button>
+                    )}
+
                     <canvas ref={canvasRef} className="hidden"></canvas>
                 </div>
             );
