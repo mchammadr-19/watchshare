@@ -665,7 +665,10 @@
                     {/* Details/Preview Modal */}
                     {selectedItem && (
                         <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-lg flex flex-col items-center justify-start p-4 overflow-y-auto">
-                            <button onClick={() => {setSelectedItem(null); setSeason(1); setEpisode(1); setTvDetails({ seasons: [] }); setSeasonPoster(null); setCustomPoster(null); setShowPosterPicker(false); setPersonalRating(0);}} className="absolute top-6 right-6 p-2 text-white/60 hover:text-white transition-all z-50"><Icon name="x" size={30} /></button>
+                            <div className="absolute top-6 inset-x-6 flex justify-between items-center z-50">
+                                <span className="text-white/30 font-inter font-semibold tracking-widest uppercase text-sm pl-2 pointer-events-none">Preview</span>
+                                <button onClick={() => {setSelectedItem(null); setSeason(1); setEpisode(1); setTvDetails({ seasons: [] }); setSeasonPoster(null); setCustomPoster(null); setShowPosterPicker(false); setPersonalRating(0);}} className="p-2 text-white/60 hover:text-white transition-all"><Icon name="x" size={30} /></button>
+                            </div>
                             
                             <div className="w-full max-w-sm flex flex-col gap-6 pt-16 pb-12 animate-slide-up scale-[0.9] sm:scale-100 origin-top">
                                 <div className="relative aspect-[9/16] w-full rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl bg-neutral-950" style={{ backgroundColor: bgColor }}>
@@ -676,7 +679,7 @@
                                     
                                     <div className="absolute inset-0 flex flex-col items-center">
                                         <div className="w-[59.25%] aspect-[2/3] mt-[10.41%] shrink-0 relative">
-                                            <div className="w-full h-full rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl">
+                                            <div className="w-full h-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
                                                 <img src={`${TMDB_IMAGE_BASE}${activePoster}`} className="w-full h-full object-cover transition-all" alt="Poster Preview" />
                                             </div>
                                             
