@@ -88,6 +88,9 @@
         }
         .animate-bounce-subtle { animation: bounce-subtle 3s infinite ease-in-out; }
 
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #000; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
@@ -148,6 +151,7 @@
             const [bgColor, setBgColor] = useState('#000000');
             const [bgOpacity, setBgOpacity] = useState(1);
             const [hasSearched, setHasSearched] = useState(false);
+            const [hasEverSearched, setHasEverSearched] = useState(false);
             
             // Native PWA State Only
             const [canInstall, setCanInstall] = useState(false);
@@ -162,6 +166,8 @@
             const [tvDetails, setTvDetails] = useState({ seasons: [] });
             const [seasonPoster, setSeasonPoster] = useState(null);
             const [availableEpisodes, setAvailableEpisodes] = useState(1);
+            const [customPoster, setCustomPoster] = useState(null);
+            const [showPosterPicker, setShowPosterPicker] = useState(false);
 
             const canvasRef = useRef(null);
 
@@ -202,6 +208,8 @@
 
             useEffect(() => {
                 if (selectedItem && (selectedItem.media_type === 'tv' || !selectedItem.title)) {
+                    setCustomPoster(null);
+                    setShowPosterPicker(false);
                     fetchTvData(selectedItem.id);
                 }
             }, [selectedItem]);
@@ -245,7 +253,6 @@
                         setAvailableEpisodes(data.episodes.length);
                         setEpisode(1); 
                     }
-                    setSeasonPoster(data.poster_path);
                 } catch (err) { 
                     console.error("Season Data Fetch Error:", err); 
                     setError(err.message);
@@ -258,6 +265,7 @@
                 setLoading(true);
                 setError(null);
                 setHasSearched(false);
+                setHasEverSearched(true);
                 try {
                     const [movieRes, tvRes] = await Promise.all([
                         fetch(`https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US&page=1`),
@@ -293,10 +301,13 @@
                 setMovies([]);
                 setSeries([]);
                 setHasSearched(false);
+                setHasEverSearched(false);
                 setSelectedItem(null);
                 setError(null);
                 setShowAllMovies(false);
                 setShowAllSeries(false);
+                setCustomPoster(null);
+                setShowPosterPicker(false);
             };
 
             const getBalancedLines = (ctx, text, maxWidth) => {
@@ -339,7 +350,7 @@
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                     const isTv = item.media_type === 'tv' || !item.title;
-                    const posterToUse = (isTv && seasonPoster) ? seasonPoster : item.poster_path;
+                    const posterToUse = customPoster || item.poster_path;
 
                     const bgImg = new Image();
                     bgImg.crossOrigin = "anonymous";
@@ -474,6 +485,24 @@
             );
 
             const isTvSelected = selectedItem && (selectedItem.media_type === 'tv' || !selectedItem.title);
+            
+            const availablePosters = [];
+            if (selectedItem && selectedItem.poster_path) {
+                availablePosters.push({ id: 'main', path: selectedItem.poster_path, label: 'Main Poster' });
+            }
+            if (isTvSelected && tvDetails && tvDetails.seasons) {
+                tvDetails.seasons.forEach(s => {
+                    if (s.poster_path && !availablePosters.find(p => p.path === s.poster_path)) {
+                        availablePosters.push({ 
+                            id: `s${s.season_number}`, 
+                            path: s.poster_path, 
+                            label: s.season_number === 0 ? 'Specials' : `Season ${s.season_number}` 
+                        });
+                    }
+                });
+            }
+
+            const activePoster = customPoster || selectedItem?.poster_path || '';
 
             return (
                 <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black flex flex-col font-inter relative">
@@ -589,18 +618,51 @@
                     {/* Details/Preview Modal */}
                     {selectedItem && (
                         <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-lg flex flex-col items-center justify-start p-4 overflow-y-auto">
-                            <button onClick={() => {setSelectedItem(null); setSeason(1); setEpisode(1); setTvDetails({ seasons: [] }); setSeasonPoster(null);}} className="absolute top-6 right-6 p-3 bg-white/10 rounded-full hover:bg-white/20 transition-all z-50"><Icon name="x" size={24} /></button>
+                            <button onClick={() => {setSelectedItem(null); setSeason(1); setEpisode(1); setTvDetails({ seasons: [] }); setSeasonPoster(null); setCustomPoster(null); setShowPosterPicker(false);}} className="absolute top-6 right-6 p-3 bg-white/10 rounded-full hover:bg-white/20 transition-all z-50"><Icon name="x" size={24} /></button>
                             
                             <div className="w-full max-w-sm flex flex-col gap-6 pt-16 pb-12 animate-slide-up scale-[0.9] sm:scale-100 origin-top">
                                 <div className="relative aspect-[9/16] w-full rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl bg-neutral-950" style={{ backgroundColor: bgColor }}>
                                     <div className="absolute inset-0 transition-opacity" style={{ opacity: 0.45 }}>
-                                        <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/t/p/w1280${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${seasonPoster || selectedItem.poster_path}`} className="absolute inset-0 w-full h-full object-cover scale-[1.25] blur-[12px]" alt="" />
+                                        <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/t/p/w1280${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${activePoster}`} className="absolute inset-0 w-full h-full object-cover scale-[1.25] blur-[12px]" alt="" />
                                     </div>
                                     <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, rgba(${hexToRgb(bgColor)}, ${bgOpacity * 0.1}), rgba(${hexToRgb(bgColor)}, ${bgOpacity}))` }}></div>
                                     
                                     <div className="absolute inset-0 flex flex-col items-center">
-                                        <div className="w-[59.25%] aspect-[2/3] rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl mt-[10.41%] shrink-0">
-                                            <img src={`${TMDB_IMAGE_BASE}${seasonPoster || selectedItem.poster_path}`} className="w-full h-full object-cover" alt="Poster Preview" />
+                                        <div className="w-[59.25%] aspect-[2/3] mt-[10.41%] shrink-0 relative">
+                                            <div className="w-full h-full rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl">
+                                                <img src={`${TMDB_IMAGE_BASE}${activePoster}`} className="w-full h-full object-cover transition-all" alt="Poster Preview" />
+                                            </div>
+                                            
+                                            {/* Gear Button for Poster Selection - Outside Right */}
+                                            {isTvSelected && availablePosters.length > 1 && (
+                                                <div className="absolute top-4 -right-11 sm:-right-14 z-30 flex flex-col items-end">
+                                                    <button 
+                                                        onClick={() => setShowPosterPicker(!showPosterPicker)}
+                                                        className={`p-2.5 rounded-full text-white transition-all shadow-xl border ${showPosterPicker ? 'bg-pink-600 border-pink-500 scale-105' : 'bg-black/60 backdrop-blur-md border-white/20 hover:bg-black/80 hover:scale-105 active:scale-95'}`}
+                                                        title="Choose Poster"
+                                                    >
+                                                        <Icon name="settings" size={18} />
+                                                    </button>
+
+                                                    {/* Floating Scrollable Picker Menu */}
+                                                    {showPosterPicker && (
+                                                        <div className="absolute top-14 right-0 w-28 sm:w-32 bg-neutral-900/95 backdrop-blur-xl border border-white/15 rounded-2xl p-2.5 shadow-2xl animate-slide-up flex flex-col origin-top-right">
+                                                            <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10 shrink-0">
+                                                                <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 w-full text-center">Posters</span>
+                                                            </div>
+                                                            {/* Scrollable Container */}
+                                                            <div className="flex flex-col gap-2.5 overflow-y-auto overscroll-contain max-h-[220px] sm:max-h-[260px] pr-1 hide-scroll">
+                                                                {availablePosters.map(p => (
+                                                                    <div key={p.id} onClick={() => { setCustomPoster(p.path); setShowPosterPicker(false); }} className={`relative w-full aspect-[2/3] rounded-xl overflow-hidden cursor-pointer border-2 transition-all shrink-0 ${activePoster === p.path ? 'border-pink-500 scale-[0.98] shadow-[0_0_15px_rgba(236,72,153,0.4)]' : 'border-transparent opacity-50 hover:opacity-100 hover:scale-[0.98]'}`}>
+                                                                        <img src={`${TMDB_IMAGE_BASE}${p.path}`} className="w-full h-full object-cover" />
+                                                                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/80 to-transparent pt-8 pb-1.5 px-1 text-[8px] text-center font-bold text-white uppercase tracking-widest leading-tight">{p.label}</div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                         
                                         <div className="text-center w-full px-8 mt-[7%] flex flex-col items-center justify-center">
@@ -706,7 +768,7 @@
                     )}
                     
                     {/* Native Floating Install Button Only (Centered Wrapper) */}
-                    {canInstall && !selectedItem && !hasSearched && (
+                    {canInstall && !selectedItem && !hasEverSearched && query.trim() === '' && (
                         <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
                             <button 
                                 onClick={async () => { 
