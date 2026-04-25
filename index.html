@@ -665,7 +665,7 @@
                     {/* Details/Preview Modal */}
                     {selectedItem && (
                         <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-lg flex flex-col items-center justify-start p-4 overflow-y-auto">
-                            <button onClick={() => {setSelectedItem(null); setSeason(1); setEpisode(1); setTvDetails({ seasons: [] }); setSeasonPoster(null); setCustomPoster(null); setShowPosterPicker(false); setPersonalRating(0);}} className="absolute top-6 right-6 p-3 bg-white/10 rounded-full hover:bg-white/20 transition-all z-50"><Icon name="x" size={24} /></button>
+                            <button onClick={() => {setSelectedItem(null); setSeason(1); setEpisode(1); setTvDetails({ seasons: [] }); setSeasonPoster(null); setCustomPoster(null); setShowPosterPicker(false); setPersonalRating(0);}} className="absolute top-6 right-6 p-2 text-white/60 hover:text-white transition-all z-50"><Icon name="x" size={30} /></button>
                             
                             <div className="w-full max-w-sm flex flex-col gap-6 pt-16 pb-12 animate-slide-up scale-[0.9] sm:scale-100 origin-top">
                                 <div className="relative aspect-[9/16] w-full rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl bg-neutral-950" style={{ backgroundColor: bgColor }}>
@@ -680,12 +680,12 @@
                                                 <img src={`${TMDB_IMAGE_BASE}${activePoster}`} className="w-full h-full object-cover transition-all" alt="Poster Preview" />
                                             </div>
                                             
-                                            {/* Gear Button for Poster Selection - Outside Right */}
+                                            {/* Gear Button for Poster Selection - Aligned with border */}
                                             {isTvSelected && availablePosters.length > 1 && (
-                                                <div className="absolute top-4 -right-11 sm:-right-14 z-30 flex flex-col items-end">
+                                                <div className="absolute top-6 right-0 translate-x-1/2 z-30 flex flex-col items-end">
                                                     <button 
                                                         onClick={() => setShowPosterPicker(!showPosterPicker)}
-                                                        className={`p-2.5 rounded-full transition-all shadow-xl border ${showPosterPicker ? 'bg-yellow-400 border-yellow-300 text-black scale-105' : 'text-white bg-black/60 backdrop-blur-md border-white/20 hover:bg-black/80 hover:scale-105 active:scale-95'}`}
+                                                        className={`p-2 rounded-full transition-all shadow-xl border ${showPosterPicker ? 'bg-yellow-400 border-yellow-300 text-black scale-105' : 'text-white bg-black/60 backdrop-blur-md border-white/20 hover:bg-black/80 hover:scale-105 active:scale-95'}`}
                                                         title="Choose Poster"
                                                     >
                                                         <Icon name="settings" size={18} />
@@ -713,7 +713,7 @@
                                         </div>
                                         
                                         <div className="text-center w-full px-8 mt-[7%] flex flex-col items-center justify-center">
-                                            <h3 className={`text-[1.85rem] font-light leading-tight uppercase text-white font-oswald drop-shadow-md text-center max-w-[90%] transition-all ${isTvSelected && showSeasonEpisode ? 'mb-[1.5%]' : 'mb-[4.5%]'}`} style={{ textWrap: 'balance' }}>
+                                            <h3 className={`text-[1.5rem] font-light leading-tight uppercase text-white font-oswald drop-shadow-md text-center max-w-[90%] transition-all ${isTvSelected && showSeasonEpisode ? 'mb-[1.5%]' : 'mb-[4.5%]'}`} style={{ textWrap: 'balance' }}>
                                                 {(selectedItem.title || selectedItem.name)}
                                             </h3>
 
@@ -764,7 +764,7 @@
                                                 </div>
                                                 <label className="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" className="sr-only peer" checked={showSeasonEpisode} onChange={() => setShowSeasonEpisode(!showSeasonEpisode)} />
-                                                    <div className="w-11 h-6 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
+                                                    <div className="w-11 h-6 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-black after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400 peer-checked:after:bg-black"></div>
                                                 </label>
                                             </div>
                                             
