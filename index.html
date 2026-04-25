@@ -340,10 +340,11 @@
                     ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.beginPath(); ctx.arc(detailX, textBaselineY, 4.5, 0, Math.PI * 2); ctx.fill(); detailX += dotSpace/2;
                     ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillText(typeTxt, detailX, textBaselineY); ctx.restore();
 
+                    // --- REDUCED SIZE FOR render.png ---
                     const attrImg = new Image(); attrImg.src = 'render.png';
                     await new Promise(r => { attrImg.onload = r; attrImg.onerror = r; });
                     if (attrImg.complete) {
-                        const aWidth = 540, aHeight = (attrImg.height / attrImg.width) * aWidth;
+                        const aWidth = 280, aHeight = (attrImg.height / attrImg.width) * aWidth;
                         ctx.save(); ctx.globalAlpha = 0.2;
                         ctx.drawImage(attrImg, (canvas.width - aWidth) / 2, 1780 - (aHeight / 2), aWidth, aHeight);
                         ctx.restore();
@@ -393,12 +394,10 @@
                             <img src="header.png" alt="WatchShare" className="h-6 sm:h-8 w-auto object-contain" />
                         </div>
                         <div className="flex items-center gap-2">
-                            {/* Saweria Support - Now with heart icon */}
                             <a href="https://saweria.co/mchammadr" target="_blank" className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-yellow-600/10 hover:bg-yellow-600/20 text-yellow-500 rounded-full border border-yellow-500/20 transition-all text-[10px] sm:text-xs font-bold">
                                 <Icon name="heart" size={14} className="fill-yellow-500" />
                                 <span>Saweria</span>
                             </a>
-                            {/* Ko-fi Support */}
                             <a href="https://ko-fi.com/mchammadr_" target="_blank" className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-pink-600/10 hover:bg-pink-600/20 text-pink-400 rounded-full border border-pink-500/20 transition-all text-[10px] sm:text-xs font-bold">
                                 <Icon name="heart" size={14} className="fill-pink-400" />
                                 <span>Ko-fi</span>
@@ -478,7 +477,7 @@
                             <div className="w-full max-w-sm flex flex-col gap-6 pt-16 pb-12 animate-slide-up scale-[0.9] sm:scale-100 origin-top">
                                 <div className="relative aspect-[9/16] w-full rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl bg-neutral-950" style={{ backgroundColor: bgColor }}>
                                     <div className="absolute inset-0 transition-opacity" style={{ opacity: 0.45 }}>
-                                        <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/p/w780${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${selectedItem.poster_path}`} className="absolute inset-0 w-full h-full object-cover blur-2xl scale-125" alt="" />
+                                        <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/t/p/w780${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${selectedItem.poster_path}`} className="absolute inset-0 w-full h-full object-cover blur-2xl scale-125" alt="" />
                                     </div>
                                     <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, rgba(${hexToRgb(bgColor)}, ${bgOpacity * 0.1}), rgba(${hexToRgb(bgColor)}, ${bgOpacity}))` }}></div>
                                     
@@ -508,7 +507,7 @@
                                         </div>
 
                                         <div className="absolute bottom-[7%] w-full flex flex-col items-center opacity-70">
-                                            <img src="render.png" className="h-5 w-auto object-contain px-8" alt="render-footer" style={{ opacity: 0.2 }} />
+                                            <img src="render.png" className="h-4 w-auto object-contain px-8" alt="render-footer" style={{ opacity: 0.2 }} />
                                         </div>
                                     </div>
                                 </div>
