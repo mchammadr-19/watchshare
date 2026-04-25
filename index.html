@@ -145,7 +145,9 @@
             const [bgColor, setBgColor] = useState('#000000');
             const [bgOpacity, setBgOpacity] = useState(1);
             const [hasSearched, setHasSearched] = useState(false);
-            const [installPrompt, setInstallPrompt] = useState(null);
+            
+            // Mengubah state instal prompt menjadi penentu tampilan tombol
+            const [showInstallBtn, setShowInstallBtn] = useState(false);
             
             const [showAllMovies, setShowAllMovies] = useState(false);
             const [showAllSeries, setShowAllSeries] = useState(false);
@@ -159,38 +161,26 @@
 
             const canvasRef = useRef(null);
 
-            // 🚀 Improved PWA Install Logic - Floating Round Button
+            // 🚀 Improved PWA Install Logic - Selalu tampilkan jika tidak di mode standalone
             useEffect(() => {
-                const refreshPrompt = () => {
-                    if (window.deferredPrompt && !installPrompt) {
-                        setInstallPrompt(window.deferredPrompt);
-                    }
-                };
-
-                // Check for standalone mode
                 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-                if (isStandalone) {
-                    setInstallPrompt(null);
-                    return;
+                
+                // Jika belum di-install / tidak di mode standalone, tampilkan tombol
+                if (!isStandalone) {
+                    setShowInstallBtn(true);
                 }
 
-                // Polling for prompt availability
-                const interval = setInterval(refreshPrompt, 1000);
-
-                window.addEventListener('pwa-prompt-ready', refreshPrompt);
-                window.addEventListener('appinstalled', () => {
-                    setInstallPrompt(null);
+                const handleAppInstalled = () => {
+                    setShowInstallBtn(false);
                     window.deferredPrompt = null;
-                });
+                };
 
-                // Initial check
-                refreshPrompt();
+                window.addEventListener('appinstalled', handleAppInstalled);
 
                 return () => {
-                    clearInterval(interval);
-                    window.removeEventListener('pwa-prompt-ready', refreshPrompt);
+                    window.removeEventListener('appinstalled', handleAppInstalled);
                 };
-            }, [installPrompt]);
+            }, []);
 
             useEffect(() => {
                 if (selectedItem && (selectedItem.media_type === 'tv' || !selectedItem.title)) {
@@ -517,9 +507,14 @@
                         )}
                     </main>
 
-                    <footer className="sticky bottom-0 z-30 bg-black/90 backdrop-blur-xl py-6 border-t border-white/5 flex flex-col items-center gap-2">
+                    <footer className="sticky bottom-0 z-30 bg-black/90 backdrop-blur-xl py-6 border-t border-white/5 flex flex-col items-center gap-3">
                         <img src="attribution.png" className="h-5 w-auto opacity-50 grayscale hover:opacity-100 hover:grayscale-0 transition-all" alt="TMDB Attribution" />
-                        <p className="text-[9px] text-neutral-600 font-medium px-6 text-center uppercase tracking-tighter">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+                        <div className="bg-neutral-900/50 border border-white/10 rounded-xl px-4 py-2.5 max-w-[90%] mx-auto">
+                            <p className="text-[9px] text-neutral-500 font-medium text-center uppercase tracking-tight leading-relaxed">
+                                This product uses the TMDB API<br />
+                                but is not endorsed or certified by TMDB.
+                            </p>
+                        </div>
                     </footer>
 
                     {error && (
@@ -654,15 +649,24 @@
                         </div>
                     )}
                     
-                    {installPrompt && !selectedItem && (
+                    {showInstallBtn && !selectedItem && (
                         <button 
                             onClick={async () => { 
-                                if (!installPrompt) return;
-                                installPrompt.prompt(); 
-                                const { outcome } = await installPrompt.userChoice; 
-                                if (outcome === 'accepted') {
-                                    setInstallPrompt(null);
-                                    window.deferredPrompt = null;
+                                if (window.deferredPrompt) {
+                                    window.deferredPrompt.prompt(); 
+                                    const { outcome } = await window.deferredPrompt.userChoice; 
+                                    if (outcome === 'accepted') {
+                                        setShowInstallBtn(false);
+                                        window.deferredPrompt = null;
+                                    }
+                                } else {
+                                    // Fallback message untuk iOS atau browser yang tidak mendukung prompt PWA langsung
+                                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                                    if (isIOS) {
+                                        alert("Untuk menginstall di iOS: Ketuk ikon 'Share' (Bagikan) di bagian bawah browser, lalu pilih 'Add to Home Screen' (Tambah ke Layar Utama).");
+                                    } else {
+                                        alert("Gagal memunculkan prompt instalasi. Coba install secara manual dari menu browser Anda (titik tiga) -> pilih 'Install App' atau 'Add to Home screen'. Pastikan file icon.png tersedia.");
+                                    }
                                 }
                             }} 
                             className="fixed bottom-8 right-8 z-50 flex items-center justify-center bg-white text-black w-14 h-14 rounded-full shadow-[0_10px_30px_rgba(255,255,255,0.3)] hover:scale-110 active:scale-95 transition-all animate-bounce-subtle border border-white/20 group"
