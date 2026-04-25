@@ -120,6 +120,7 @@
             const [season, setSeason] = useState(1);
             const [episode, setEpisode] = useState(1);
             const [tvDetails, setTvDetails] = useState({ seasons: [] });
+            const [seasonPoster, setSeasonPoster] = useState(null);
             const [availableEpisodes, setAvailableEpisodes] = useState(1);
 
             const canvasRef = useRef(null);
@@ -151,9 +152,18 @@
                     if (res.status === 401) throw new Error("Unauthorized: Invalid API Key.");
                     const data = await res.json();
                     setTvDetails(data);
+                    
+                    // Set default to LATEST season
                     if (data.seasons && data.seasons.length > 0) {
-                        const firstValidSeason = data.seasons.find(s => s.season_number > 0) || data.seasons[0];
-                        setSeason(firstValidSeason.season_number);
+                        const validSeasons = data.seasons.filter(s => s.season_number > 0);
+                        if (validSeasons.length > 0) {
+                            const latestSeason = validSeasons.reduce((prev, current) => 
+                                (prev.season_number > current.season_number) ? prev : current
+                            );
+                            setSeason(latestSeason.season_number);
+                        } else {
+                            setSeason(data.seasons[0].season_number);
+                        }
                     }
                 } catch (err) { 
                     console.error("TV Data Fetch Error:", err); 
@@ -168,8 +178,10 @@
                     const data = await res.json();
                     if (data.episodes) {
                         setAvailableEpisodes(data.episodes.length);
-                        setEpisode(1); 
+                        setEpisode(1); // Default episode 1
                     }
+                    // Update season poster path
+                    setSeasonPoster(data.poster_path);
                 } catch (err) { 
                     console.error("Season Data Fetch Error:", err); 
                     setError(err.message);
@@ -250,11 +262,14 @@
                     ctx.fillStyle = bgColor;
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+                    const isTv = item.media_type === 'tv' || !item.title;
+                    const posterToUse = (isTv && seasonPoster) ? seasonPoster : item.poster_path;
+
                     const bgImg = new Image();
                     bgImg.crossOrigin = "anonymous";
                     bgImg.src = item.backdrop_path 
                         ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}?canvas=true`
-                        : `${TMDB_IMAGE_BASE}${item.poster_path}?canvas=true`;
+                        : `${TMDB_IMAGE_BASE}${posterToUse}?canvas=true`;
 
                     await new Promise(r => { bgImg.onload = r; bgImg.onerror = r; });
                     if (bgImg.complete) {
@@ -277,7 +292,7 @@
 
                     const img = new Image();
                     img.crossOrigin = "anonymous";
-                    img.src = `${TMDB_IMAGE_BASE}${item.poster_path}?canvas=true`;
+                    img.src = `${TMDB_IMAGE_BASE}${posterToUse}?canvas=true`;
                     await new Promise(r => { img.onload = r; img.onerror = r; });
                     if (img.complete) {
                         const pw = 640, ph = 960, px = (canvas.width - pw) / 2, py = 200, radius = 45;
@@ -304,8 +319,6 @@
                     });
                     ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
-                    const isTv = item.media_type === 'tv' || !item.title;
-                    
                     if (isTv && showSeasonEpisode) {
                         ctx.font = '500 24px Inter, sans-serif';
                         ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
@@ -340,7 +353,6 @@
                     ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.beginPath(); ctx.arc(detailX, textBaselineY, 4.5, 0, Math.PI * 2); ctx.fill(); detailX += dotSpace/2;
                     ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillText(typeTxt, detailX, textBaselineY); ctx.restore();
 
-                    // --- REDUCED SIZE FOR render.png ---
                     const attrImg = new Image(); attrImg.src = 'render.png';
                     await new Promise(r => { attrImg.onload = r; attrImg.onerror = r; });
                     if (attrImg.complete) {
@@ -472,18 +484,18 @@
 
                     {selectedItem && (
                         <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-lg flex flex-col items-center justify-start p-4 overflow-y-auto">
-                            <button onClick={() => {setSelectedItem(null); setSeason(1); setEpisode(1); setTvDetails({ seasons: [] });}} className="absolute top-6 right-6 p-3 bg-white/10 rounded-full hover:bg-white/20 transition-all z-50"><Icon name="x" size={24} /></button>
+                            <button onClick={() => {setSelectedItem(null); setSeason(1); setEpisode(1); setTvDetails({ seasons: [] }); setSeasonPoster(null);}} className="absolute top-6 right-6 p-3 bg-white/10 rounded-full hover:bg-white/20 transition-all z-50"><Icon name="x" size={24} /></button>
                             
                             <div className="w-full max-w-sm flex flex-col gap-6 pt-16 pb-12 animate-slide-up scale-[0.9] sm:scale-100 origin-top">
                                 <div className="relative aspect-[9/16] w-full rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl bg-neutral-950" style={{ backgroundColor: bgColor }}>
                                     <div className="absolute inset-0 transition-opacity" style={{ opacity: 0.45 }}>
-                                        <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/t/p/w780${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${selectedItem.poster_path}`} className="absolute inset-0 w-full h-full object-cover blur-2xl scale-125" alt="" />
+                                        <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/p/w780${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${seasonPoster || selectedItem.poster_path}`} className="absolute inset-0 w-full h-full object-cover blur-2xl scale-125" alt="" />
                                     </div>
                                     <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, rgba(${hexToRgb(bgColor)}, ${bgOpacity * 0.1}), rgba(${hexToRgb(bgColor)}, ${bgOpacity}))` }}></div>
                                     
                                     <div className="absolute inset-0 flex flex-col items-center">
                                         <div className="w-[59.25%] aspect-[2/3] rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl mt-[10.41%] shrink-0">
-                                            <img src={`${TMDB_IMAGE_BASE}${selectedItem.poster_path}`} className="w-full h-full object-cover" alt="Poster Preview" />
+                                            <img src={`${TMDB_IMAGE_BASE}${seasonPoster || selectedItem.poster_path}`} className="w-full h-full object-cover" alt="Poster Preview" />
                                         </div>
                                         
                                         <div className="text-center w-full px-12 mt-[7%] flex flex-col items-center">
