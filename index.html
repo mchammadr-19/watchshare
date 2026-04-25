@@ -110,11 +110,9 @@
             const [hasSearched, setHasSearched] = useState(false);
             const [installPrompt, setInstallPrompt] = useState(null);
             
-            // UI States for list visibility
             const [showAllMovies, setShowAllMovies] = useState(false);
             const [showAllSeries, setShowAllSeries] = useState(false);
 
-            // TV Specific states
             const [showSeasonEpisode, setShowSeasonEpisode] = useState(true);
             const [season, setSeason] = useState(1);
             const [episode, setEpisode] = useState(1);
@@ -132,14 +130,12 @@
                 return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
             }, []);
 
-            // Auto fetch TV details when a TV show is selected
             useEffect(() => {
                 if (selectedItem && (selectedItem.media_type === 'tv' || !selectedItem.title)) {
                     fetchTvData(selectedItem.id);
                 }
             }, [selectedItem]);
 
-            // Auto fetch Season details when season changes
             useEffect(() => {
                 if (selectedItem && tvDetails.seasons && tvDetails.seasons.length > 0) {
                     fetchSeasonData(selectedItem.id, season);
@@ -151,7 +147,6 @@
                     const res = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=${apiKey}&language=en-US`);
                     const data = await res.json();
                     setTvDetails(data);
-                    // Ambil season pertama yang bukan season 0 (Specials)
                     if (data.seasons && data.seasons.length > 0) {
                         const firstValidSeason = data.seasons.find(s => s.season_number > 0) || data.seasons[0];
                         setSeason(firstValidSeason.season_number);
@@ -192,7 +187,6 @@
                     const movieData = await movieRes.json();
                     const tvData = await tvRes.json();
                     
-                    // FIXED: Manually inject media_type because endpoint specific results don't include it
                     setMovies((movieData.results || [])
                         .filter(i => i.poster_path)
                         .map(item => ({...item, media_type: 'movie'}))
@@ -290,7 +284,8 @@
                     ctx.font = '300 70px Oswald, sans-serif';
                     
                     const lines = getBalancedLines(ctx, titleStr, 750);
-                    let currentY = 1255; 
+                    // INCREASED: Pushed title lower for better gap (from 1255 to 1295)
+                    let currentY = 1295; 
                     const titleLineHeight = 82;
 
                     ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 15; ctx.shadowOffsetY = 5;
@@ -306,9 +301,9 @@
                         ctx.font = '500 24px Inter, sans-serif';
                         ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
                         ctx.fillText(`S${season.toString().padStart(2, '0')} E${episode.toString().padStart(2, '0')}`, canvas.width / 2, currentY - 35);
-                        currentY += 25;
+                        currentY += 45; 
                     } else {
-                        currentY += 10;
+                        currentY += 35;
                     }
 
                     ctx.font = '500 34px Inter, sans-serif';
@@ -320,7 +315,7 @@
                     const dotSpace = 44, totalTextW = yearW + ratingW + typeW + (dotSpace * 2);
                     const boxW = totalTextW + 90, boxH = 72, boxX = (canvas.width - boxW) / 2, boxRadius = 36;
                     
-                    const boxY = currentY - 25;
+                    const boxY = currentY - 50;
 
                     ctx.save();
                     drawRoundedRect(ctx, boxX, boxY, boxW, boxH, boxRadius);
@@ -384,19 +379,12 @@
 
             return (
                 <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black flex flex-col font-inter relative">
-                    {/* Bigger Header */}
                     <header className="sticky top-0 z-30 bg-black/90 backdrop-blur-xl px-6 py-5 flex items-center justify-between border-b border-white/10">
                         <div className="flex items-center h-10 sm:h-12">
-                            {/* Updated Logo size */}
                             <img src="header.png" alt="WatchShare" className="h-6 sm:h-8 w-auto object-contain" />
                         </div>
                         <div className="flex items-center gap-2">
-                            {/* Donate Button: Support via Ko-fi */}
-                            <a 
-                                href="https://ko-fi.com/mchammadr_" 
-                                target="_blank" 
-                                className="flex items-center gap-2 px-4 py-2.5 bg-pink-600/20 hover:bg-pink-600/30 text-pink-400 rounded-full border border-pink-500/30 transition-all text-[11px] sm:text-xs font-bold"
-                            >
+                            <a href="https://ko-fi.com/mchammadr_" target="_blank" className="flex items-center gap-2 px-4 py-2.5 bg-pink-600/20 hover:bg-pink-600/30 text-pink-400 rounded-full border border-pink-500/30 transition-all text-[11px] sm:text-xs font-bold">
                                 <Icon name="heart" size={16} className="fill-pink-400" />
                                 <span className="hidden sm:inline">Support via Ko-fi</span>
                                 <span className="sm:hidden">Support</span>
@@ -460,7 +448,6 @@
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/95 backdrop-blur-md transition-opacity">
                             <div className="bg-neutral-900 w-full max-w-sm rounded-[2.5rem] p-10 border border-white/10 shadow-2xl animate-slide-up">
                                 <div className="flex justify-center mb-8">
-                                    {/* Updated Logo with header.png in modal */}
                                     <img src="header.png" className="h-12 w-auto" alt="Logo" />
                                 </div>
                                 <h2 className="text-2xl font-oswald font-light mb-3 text-center uppercase tracking-tighter">API Setup</h2>
@@ -473,12 +460,9 @@
 
                     {selectedItem && (
                         <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-lg flex flex-col items-center justify-start p-4 overflow-y-auto">
-                            {/* Adjusted Close Button Position */}
                             <button onClick={() => {setSelectedItem(null); setSeason(1); setEpisode(1); setTvDetails({ seasons: [] });}} className="absolute top-6 right-6 p-3 bg-white/10 rounded-full hover:bg-white/20 transition-all z-50"><Icon name="x" size={24} /></button>
                             
-                            {/* Improved scale and spacing for Share Preview */}
                             <div className="w-full max-w-sm flex flex-col gap-6 pt-16 pb-12 animate-slide-up scale-[0.9] sm:scale-100 origin-top">
-                                {/* CARD PREVIEW AREA */}
                                 <div className="relative aspect-[9/16] w-full rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl bg-neutral-950" style={{ backgroundColor: bgColor }}>
                                     <div className="absolute inset-0 transition-opacity" style={{ opacity: 0.45 }}>
                                         <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/t/p/w780${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${selectedItem.poster_path}`} className="absolute inset-0 w-full h-full object-cover blur-2xl scale-125" alt="" />
@@ -491,12 +475,12 @@
                                         </div>
                                         
                                         <div className="text-center w-full px-12 mt-[7%] flex flex-col items-center">
-                                            <h3 className="text-[1.85rem] font-light leading-tight uppercase text-white font-oswald drop-shadow-md text-center max-w-[90%] mb-[1.5%]" style={{ textWrap: 'balance' }}>
+                                            <h3 className={`text-[1.85rem] font-light leading-tight uppercase text-white font-oswald drop-shadow-md text-center max-w-[90%] transition-all ${isTvSelected && showSeasonEpisode ? 'mb-[1.5%]' : 'mb-[4.5%]'}`} style={{ textWrap: 'balance' }}>
                                                 {(selectedItem.title || selectedItem.name)}
                                             </h3>
 
                                             {isTvSelected && showSeasonEpisode && (
-                                                <p className="text-[0.65rem] font-medium text-white/50 font-inter mb-[3%] tracking-widest uppercase">
+                                                <p className="text-[0.65rem] font-medium text-white/50 font-inter mb-[3.5%] tracking-widest uppercase">
                                                     S{season.toString().padStart(2, '0')} E{episode.toString().padStart(2, '0')}
                                                 </p>
                                             )}
@@ -517,7 +501,6 @@
                                 </div>
 
                                 <div className="flex flex-col gap-3 w-full">
-                                    {/* TV SERIES SELECTOR UI */}
                                     {isTvSelected && (
                                         <div className="flex flex-col gap-3 bg-white/5 backdrop-blur-xl px-6 py-4 rounded-[2rem] border border-white/10 shadow-xl w-full">
                                             <div className="flex items-center justify-between">
