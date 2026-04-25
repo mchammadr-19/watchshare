@@ -594,7 +594,7 @@
                             <div className="w-full max-w-sm flex flex-col gap-6 pt-16 pb-12 animate-slide-up scale-[0.9] sm:scale-100 origin-top">
                                 <div className="relative aspect-[9/16] w-full rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl bg-neutral-950" style={{ backgroundColor: bgColor }}>
                                     <div className="absolute inset-0 transition-opacity" style={{ opacity: 0.45 }}>
-                                        <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/t/p/w1280${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${seasonPoster || selectedItem.poster_path}`} className="absolute inset-0 w-full h-full object-cover scale-[1.3]" style={{ filter: 'blur(25px)' }} alt="" />
+                                        <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/t/p/w1280${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${seasonPoster || selectedItem.poster_path}`} className="absolute inset-0 w-full h-full object-cover scale-[1.25] blur-[12px]" alt="" />
                                     </div>
                                     <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, rgba(${hexToRgb(bgColor)}, ${bgOpacity * 0.1}), rgba(${hexToRgb(bgColor)}, ${bgOpacity}))` }}></div>
                                     
@@ -603,7 +603,7 @@
                                             <img src={`${TMDB_IMAGE_BASE}${seasonPoster || selectedItem.poster_path}`} className="w-full h-full object-cover" alt="Poster Preview" />
                                         </div>
                                         
-                                        <div className="text-center w-full px-12 mt-[7%] flex flex-col items-center">
+                                        <div className="text-center w-full px-8 mt-[7%] flex flex-col items-center justify-center">
                                             <h3 className={`text-[1.85rem] font-light leading-tight uppercase text-white font-oswald drop-shadow-md text-center max-w-[90%] transition-all ${isTvSelected && showSeasonEpisode ? 'mb-[1.5%]' : 'mb-[4.5%]'}`} style={{ textWrap: 'balance' }}>
                                                 {(selectedItem.title || selectedItem.name)}
                                             </h3>
@@ -614,12 +614,14 @@
                                                 </p>
                                             )}
                                             
-                                            <div className="flex items-center justify-center gap-3 bg-white/10 backdrop-blur-md px-6 py-2.5 rounded-full font-inter border border-white/15 whitespace-nowrap shadow-sm w-max mx-auto">
-                                                <span className="text-white text-[0.8rem] font-medium tracking-tight">{(selectedItem.release_date || selectedItem.first_air_date || '').split('-')[0]}</span>
-                                                <span className="w-1 h-1 bg-white/40 rounded-full shrink-0"></span>
-                                                <span className="text-yellow-400 text-[0.8rem] font-bold tracking-tight">★ {selectedItem.vote_average?.toFixed(1) || '0.0'}</span>
-                                                <span className="w-1 h-1 bg-white/40 rounded-full shrink-0"></span>
-                                                <span className="text-white/60 text-[0.8rem] font-medium uppercase tracking-tight">{isTvSelected ? 'SERIES' : 'MOVIE'}</span>
+                                            <div className="inline-flex items-center justify-center bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-full font-inter border border-white/15 shadow-sm">
+                                                <div className="flex items-center gap-2.5 sm:gap-3">
+                                                    <span className="text-white text-[10px] sm:text-[11px] font-medium tracking-tight whitespace-nowrap">{(selectedItem.release_date || selectedItem.first_air_date || '').split('-')[0]}</span>
+                                                    <span className="w-1 h-1 bg-white/40 rounded-full shrink-0"></span>
+                                                    <span className="text-yellow-400 text-[10px] sm:text-[11px] font-bold tracking-tight whitespace-nowrap">★ {selectedItem.vote_average?.toFixed(1) || '0.0'}</span>
+                                                    <span className="w-1 h-1 bg-white/40 rounded-full shrink-0"></span>
+                                                    <span className="text-white/60 text-[10px] sm:text-[11px] font-medium uppercase tracking-tight whitespace-nowrap">{isTvSelected ? 'SERIES' : 'MOVIE'}</span>
+                                                </div>
                                             </div>
                                         </div>
 
