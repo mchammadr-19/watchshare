@@ -97,11 +97,11 @@
         };
 
         const App = () => {
-            // --- REPLACE 'YOUR_API_KEY_HERE' WITH YOUR ACTUAL TMDB API KEY ---
-            const MY_KEY = 'YOUR_API_KEY_HERE'; 
+            // Hardcoded API Key as requested by Han
+            const MY_KEY = '0799284e10b09964527f237932e0290c'; 
             
-            const [apiKey, setApiKey] = useState(MY_KEY !== 'YOUR_API_KEY_HERE' ? MY_KEY : (localStorage.getItem('tmdb_key') || ''));
-            const [showSettings, setShowSettings] = useState(apiKey === '' && MY_KEY === 'YOUR_API_KEY_HERE');
+            const [apiKey] = useState(MY_KEY);
+            const [showSettings, setShowSettings] = useState(false);
             const [query, setQuery] = useState('');
             const [movies, setMovies] = useState([]);
             const [series, setSeries] = useState([]);
@@ -175,13 +175,6 @@
                     console.error("Season Data Fetch Error:", err); 
                     setError(err.message);
                 }
-            };
-
-            const saveApiKey = (key) => {
-                setApiKey(key);
-                localStorage.setItem('tmdb_key', key);
-                setShowSettings(false);
-                setError(null);
             };
 
             const searchAll = async (e) => {
@@ -406,9 +399,7 @@
                                 <span className="hidden sm:inline">Support via Ko-fi</span>
                                 <span className="sm:hidden">Support</span>
                             </a>
-                            <button onClick={() => setShowSettings(true)} className="p-3 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
-                                <Icon name="settings" size={22} className="text-neutral-300" />
-                            </button>
+                            {/* Settings button removed to stop using setup page */}
                         </div>
                     </header>
 
@@ -461,20 +452,7 @@
                         <p className="text-[9px] text-neutral-600 font-medium px-6 text-center uppercase tracking-tighter">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
                     </footer>
 
-                    {/* API Settings Modal */}
-                    {showSettings && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/95 backdrop-blur-md transition-opacity">
-                            <div className="bg-neutral-900 w-full max-w-sm rounded-[2.5rem] p-10 border border-white/10 shadow-2xl animate-slide-up">
-                                <div className="flex justify-center mb-8">
-                                    <img src="header.png" className="h-12 w-auto" alt="Logo" />
-                                </div>
-                                <h2 className="text-2xl font-oswald font-light mb-3 text-center uppercase tracking-tighter">API Setup</h2>
-                                <p className="text-sm text-neutral-400 mb-8 text-center leading-relaxed font-inter">Please enter your TMDB API Key.<br />Get it for free at <a href="https://www.themoviedb.org/settings/api" target="_blank" className="text-white underline font-bold">The Movie DB</a>.</p>
-                                <input type="password" placeholder="Paste API Key here..." value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="w-full bg-black border border-white/10 rounded-2xl p-5 mb-8 focus:ring-1 focus:ring-white outline-none transition-all text-center font-inter" />
-                                <button onClick={() => saveApiKey(apiKey)} className="w-full py-5 bg-white text-black rounded-2xl font-bold uppercase active:scale-95 font-inter tracking-wider">GET STARTED</button>
-                            </div>
-                        </div>
-                    )}
+                    {/* API Settings Modal Removed */}
 
                     {/* Error Popup Modal */}
                     {error && (
@@ -485,10 +463,7 @@
                                 </div>
                                 <h2 className="text-2xl font-oswald font-light mb-8 uppercase tracking-tighter">INVALID API KEY</h2>
                                 <div className="flex flex-col gap-3">
-                                    <button onClick={() => { setError(null); setShowSettings(true); }} className="w-full py-4 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold uppercase text-xs transition-colors font-inter tracking-widest">
-                                        Update API Key
-                                    </button>
-                                    <button onClick={() => setError(null)} className="w-full py-3 bg-transparent text-neutral-500 hover:text-white rounded-xl font-bold uppercase text-[10px] transition-colors font-inter">
+                                    <button onClick={() => setError(null)} className="w-full py-4 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold uppercase text-xs transition-colors font-inter tracking-widest">
                                         Close
                                     </button>
                                 </div>
