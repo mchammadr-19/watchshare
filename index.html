@@ -8,24 +8,49 @@
     <!-- PWA Mini Icon & Dynamic Manifest -->
     <link rel="icon" type="image/png" href="icon.png">
     <script>
+        // Global variable to catch the prompt
+        window.deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent the mini-infobar from appearing on mobile
+            e.preventDefault();
+            // Stash the event so it can be triggered later.
+            window.deferredPrompt = e;
+            console.log("PWA: beforeinstallprompt fired");
+            // Notify React
+            window.dispatchEvent(new CustomEvent('pwa-prompt-ready'));
+        });
+
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swCode = `
+                    self.addEventListener('install', (e) => { self.skipWaiting(); });
+                    self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
+                    self.addEventListener('fetch', (e) => { e.respondWith(fetch(e.request)); });
+                `;
+                const swBlob = new Blob([swCode], { type: 'application/javascript' });
+                navigator.serviceWorker.register(URL.createObjectURL(swBlob))
+                    .then(reg => console.log('SW registered'))
+                    .catch(err => console.log('SW failed', err));
+            });
+        }
+
         const manifest = {
-            "name": "WatchShare",
+            "name": "WatchShare Story Editor",
             "short_name": "WatchShare",
+            "description": "Create amazing movie stories for your social media",
             "display": "standalone",
             "background_color": "#000000",
             "theme_color": "#000000",
             "start_url": "./",
-            "icons": [{ "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }]
+            "scope": "./",
+            "icons": [
+                { "src": "icon.png", "sizes": "192x192", "type": "image/png" },
+                { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+            ]
         };
         const manifestUrl = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
         document.write('<link rel="manifest" href="' + manifestUrl + '">');
-        
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                const swBlob = new Blob(["self.addEventListener('fetch', function(e) {});"], { type: 'application/javascript' });
-                navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
-            });
-        }
     </script>
 
     <!-- Tailwind CSS -->
@@ -127,24 +152,33 @@
 
             const canvasRef = useRef(null);
 
-            // Robust PWA Install Logic
+            // 🚀 Improved PWA Install Logic
             useEffect(() => {
-                const handleBeforeInstall = (e) => {
-                    e.preventDefault();
-                    setInstallPrompt(e);
-                };
-                const handleAppInstalled = () => {
-                    setInstallPrompt(null);
+                const refreshPrompt = () => {
+                    if (window.deferredPrompt && !installPrompt) {
+                        setInstallPrompt(window.deferredPrompt);
+                    }
                 };
 
-                window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-                window.addEventListener('appinstalled', handleAppInstalled);
+                // Polling for prompt availability (aggressive detection)
+                const interval = setInterval(refreshPrompt, 2000);
+
+                window.addEventListener('pwa-prompt-ready', refreshPrompt);
+                window.addEventListener('appinstalled', () => {
+                    setInstallPrompt(null);
+                    window.deferredPrompt = null;
+                });
+
+                // Hide if in standalone mode
+                if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+                    setInstallPrompt(null);
+                }
 
                 return () => {
-                    window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-                    window.removeEventListener('appinstalled', handleAppInstalled);
+                    clearInterval(interval);
+                    window.removeEventListener('pwa-prompt-ready', refreshPrompt);
                 };
-            }, []);
+            }, [installPrompt]);
 
             useEffect(() => {
                 if (selectedItem && (selectedItem.media_type === 'tv' || !selectedItem.title)) {
@@ -609,7 +643,18 @@
                     )}
                     
                     {installPrompt && !selectedItem && (
-                        <button onClick={async () => { installPrompt.prompt(); const { outcome } = await installPrompt.userChoice; if (outcome === 'accepted') setInstallPrompt(null); }} className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center bg-white text-black px-6 py-3 rounded-full shadow-2xl hover:scale-105 active:scale-95 transition-all font-oswald font-normal text-sm uppercase tracking-widest animate-slide-up whitespace-nowrap">
+                        <button 
+                            onClick={async () => { 
+                                if (!installPrompt) return;
+                                installPrompt.prompt(); 
+                                const { outcome } = await installPrompt.userChoice; 
+                                if (outcome === 'accepted') {
+                                    setInstallPrompt(null);
+                                    window.deferredPrompt = null;
+                                }
+                            }} 
+                            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center bg-white text-black px-8 py-4 rounded-full shadow-[0_20px_50px_rgba(255,255,255,0.2)] hover:scale-105 active:scale-95 transition-all font-oswald font-normal text-sm uppercase tracking-[0.2em] animate-slide-up whitespace-nowrap border border-white/20"
+                        >
                             <span>ADD TO HOMESCREEN</span>
                         </button>
                     )}
