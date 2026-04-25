@@ -1,23 +1,41 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Share2, Download, Film, X, Info, Settings, Tv } from 'lucide-react';
+import { Search, Share2, Download, Film, X, Info, Settings, Tv, Heart } from 'lucide-react';
 
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
+
+const hexToRgb = (hex) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '0,0,0';
+};
 
 const App = () => {
   const [apiKey, setApiKey] = useState(localStorage.getItem('tmdb_key') || '');
   const [showSettings, setShowSettings] = useState(!localStorage.getItem('tmdb_key'));
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
+  const [movies, setMovies] = useState([]);
+  const [series, setSeries] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   
+  // Customization State
+  const [bgColor, setBgColor] = useState('#000000');
+  const [bgOpacity, setBgOpacity] = useState(1); 
+  const [showSeasonEpisode, setShowSeasonEpisode] = useState(true);
+  const [season, setSeason] = useState(1);
+  const [episode, setEpisode] = useState(1);
+  const [tvDetails, setTvDetails] = useState({ seasons: [] });
+  const [availableEpisodes, setAvailableEpisodes] = useState(1);
+  
+  const [showAllMovies, setShowAllMovies] = useState(false);
+  const [showAllSeries, setShowAllSeries] = useState(false);
+
   const canvasRef = useRef(null);
 
-  // --- LOGIKA STREMIO & DEEP LINK ---
+  // --- STREMIO & ADDON DEEP LINK LOGIC ---
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const externalId = params.get('id'); // Bisa IMDB ID (tt...) atau TMDB ID
+    const externalId = params.get('id');
     const type = params.get('type') || 'movie';
 
     if (externalId && apiKey) {
@@ -31,38 +49,60 @@ const App = () => {
       let tmdbId = id;
       let mediaType = type === 'series' ? 'tv' : type;
 
-      // Jika ID dari Stremio adalah IMDB (diawali 'tt'), cari ID TMDB-nya dulu
       if (id.startsWith('tt')) {
-        const findRes = await fetch(
-          `https://api.themoviedb.org/3/find/${id}?api_key=${apiKey}&external_source=imdb_id`
-        );
+        const findRes = await fetch(`https://api.themoviedb.org/3/find/${id}?api_key=${apiKey}&external_source=imdb_id`);
         const findData = await findRes.json();
         const result = findData.movie_results?.[0] || findData.tv_results?.[0];
-        
         if (result) {
           tmdbId = result.id;
           mediaType = findData.movie_results?.[0] ? 'movie' : 'tv';
-        } else {
-          throw new Error("Item tidak ditemukan di TMDB.");
         }
       }
 
-      // Ambil data lengkap item dari TMDB
-      const res = await fetch(
-        `https://api.themoviedb.org/3/${mediaType}/${tmdbId}?api_key=${apiKey}&language=en-US`
-      );
+      const res = await fetch(`https://api.themoviedb.org/3/${mediaType}/${tmdbId}?api_key=${apiKey}&language=en-US`);
       const data = await res.json();
-      
       if (data && data.id) {
         setSelectedItem({ ...data, media_type: mediaType });
       }
-    } catch (err) {
-      console.error("Gagal memproses link eksternal:", err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error("Trigger Error:", err); }
+    finally { setLoading(false); }
   };
-  // ----------------------------------
+
+  // --- TV DETAILS LOGIC ---
+  useEffect(() => {
+    if (selectedItem && (selectedItem.media_type === 'tv' || !selectedItem.title)) {
+      fetchTvData(selectedItem.id);
+    }
+  }, [selectedItem]);
+
+  useEffect(() => {
+    if (selectedItem && tvDetails.seasons?.length > 0) {
+      fetchSeasonData(selectedItem.id, season);
+    }
+  }, [season, tvDetails]);
+
+  const fetchTvData = async (id) => {
+    try {
+      const res = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=${apiKey}&language=en-US`);
+      const data = await res.json();
+      setTvDetails(data);
+      if (data.seasons?.length > 0) {
+        const firstValidSeason = data.seasons.find(s => s.season_number > 0) || data.seasons[0];
+        setSeason(firstValidSeason.season_number);
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const fetchSeasonData = async (tvId, seasonNum) => {
+    try {
+      const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNum}?api_key=${apiKey}&language=en-US`);
+      const data = await res.json();
+      if (data.episodes) {
+        setAvailableEpisodes(data.episodes.length);
+        setEpisode(1); 
+      }
+    } catch (err) { console.error(err); }
+  };
 
   const saveApiKey = (key) => {
     setApiKey(key);
@@ -70,222 +110,377 @@ const App = () => {
     setShowSettings(false);
   };
 
-  const searchMulti = async (e) => {
+  const searchAll = async (e) => {
     if (e) e.preventDefault();
     if (!query || !apiKey) return;
-
     setLoading(true);
     try {
-      const resp = await fetch(
-        `https://api.themoviedb.org/3/search/multi?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US`
-      );
-      const data = await resp.json();
-      
-      if (data.results) {
-        const filteredAndSorted = data.results
-          .filter(item => item.media_type === 'movie' || item.media_type === 'tv')
-          .sort((a, b) => b.popularity - a.popularity);
-        
-        setResults(filteredAndSorted);
-      }
-    } catch (err) {
-      console.error("Search error:", err);
-    } finally {
-      setLoading(false);
+      const [movieRes, tvRes] = await Promise.all([
+        fetch(`https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US&page=1`),
+        fetch(`https://api.themoviedb.org/3/search/tv?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US&page=1`)
+      ]);
+      const movieData = await movieRes.json();
+      const tvData = await tvRes.json();
+      setMovies((movieData.results || []).filter(i => i.poster_path).map(item => ({...item, media_type: 'movie'})).slice(0, 20));
+      setSeries((tvData.results || []).filter(i => i.poster_path).map(item => ({...item, media_type: 'tv'})).slice(0, 20));
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
+  };
+
+  const getBalancedLines = (ctx, text, maxWidth) => {
+    const words = text.split(' ');
+    let line = '';
+    let lines = [];
+    for (let n = 0; n < words.length; n++) {
+      let testLine = line + words[n] + ' ';
+      if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+        lines.push(line.trim());
+        line = words[n] + ' ';
+      } else { line = testLine; }
     }
+    lines.push(line.trim());
+    return lines.slice(0, 3);
   };
 
   const generateStoryImage = async (item) => {
     setGenerating(true);
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    
     canvas.width = 1080;
     canvas.height = 1920;
 
+    const drawRoundedRect = (ctx, x, y, w, h, r) => {
+      ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.closePath();
+    };
+
     try {
-      if (item.backdrop_path) {
-        const bgImg = new Image();
-        bgImg.crossOrigin = "anonymous";
-        bgImg.src = `https://image.tmdb.org/t/p/w1280${item.backdrop_path}?canvas=true`;
-        
-        await new Promise((resolve) => {
-          bgImg.onload = resolve;
-          bgImg.onerror = resolve;
-        });
+      // 1. ADVANCED FONT LOADING & VALIDATION
+      const fontOswald = "300 70px Oswald";
+      const fontInterReg = "500 26px Inter";
+      const fontInterBold = "500 34px Inter";
 
-        if (bgImg.complete && bgImg.naturalWidth !== 0) {
-          ctx.save();
-          ctx.filter = 'blur(15px)';
-          const scale = Math.max(canvas.width / bgImg.width, canvas.height / bgImg.height);
-          const x = (canvas.width / 2) - (bgImg.width / 2) * scale;
-          const y = (canvas.height / 2) - (bgImg.height / 2) * scale;
-          ctx.drawImage(bgImg, x, y, bgImg.width * scale, bgImg.height * scale);
-          ctx.restore();
-        } else {
-          ctx.fillStyle = '#121212';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-      } else {
-        ctx.fillStyle = '#121212';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
+      // Re-load to ensure fresh access
+      await Promise.all([
+        document.fonts.load(fontOswald),
+        document.fonts.load(fontInterReg),
+        document.fonts.load(fontInterBold)
+      ]);
+      await document.fonts.ready;
 
-      const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      grad.addColorStop(0, 'rgba(0,0,0,0.4)');
-      grad.addColorStop(1, 'rgba(0,0,0,0.9)');
-      ctx.fillStyle = grad;
+      // Critical fix: set font and draw invisible text to "bake" it into the context
+      ctx.font = fontOswald;
+      ctx.fillText(" ", 0, 0); 
+      ctx.font = fontInterReg;
+      ctx.fillText(" ", 0, 0);
+
+      // 2. BACKGROUND RENDER
+      ctx.fillStyle = bgColor;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = `${TMDB_IMAGE_BASE}${item.poster_path}?canvas=true`;
-      
-      await new Promise((resolve) => {
-        img.onload = resolve;
-        img.onerror = resolve;
-      });
+      const bgImg = new Image();
+      bgImg.crossOrigin = "anonymous";
+      bgImg.src = item.backdrop_path 
+        ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}?canvas=true`
+        : `${TMDB_IMAGE_BASE}${item.poster_path}?canvas=true`;
 
-      if (img.complete && img.naturalWidth !== 0) {
-        const pw = 640;
-        const ph = 960;
-        const px = (canvas.width - pw) / 2;
-        const py = 200;
-        const radius = 32;
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.roundRect(px, py, pw, ph, radius);
-        ctx.shadowColor = 'rgba(0,0,0,0.8)';
-        ctx.shadowBlur = 60;
-        ctx.shadowOffsetY = 20;
-        ctx.fillStyle = '#000000';
-        ctx.fill();
-        ctx.shadowColor = 'transparent';
-        ctx.clip();
-        ctx.drawImage(img, px, py, pw, ph);
+      await new Promise(r => { bgImg.onload = r; bgImg.onerror = r; });
+      if (bgImg.complete) {
+        ctx.save(); ctx.globalAlpha = 0.45; ctx.filter = 'blur(25px)';
+        const scale = Math.max(canvas.width / bgImg.width, canvas.height / bgImg.height);
+        const x = (canvas.width / 2) - (bgImg.width / 2) * scale;
+        const y = (canvas.height / 2) - (bgImg.height / 2) * scale;
+        ctx.drawImage(bgImg, x, y, bgImg.width * scale, bgImg.height * scale);
         ctx.restore();
       }
 
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'center';
-      const title = (item.title || item.name).toUpperCase();
-      ctx.font = 'bold 56px sans-serif';
+      const rgbColor = hexToRgb(bgColor);
+      const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      grad.addColorStop(0, `rgba(${rgbColor}, ${bgOpacity * 0.1})`);
+      grad.addColorStop(1, `rgba(${rgbColor}, ${bgOpacity})`);
+      ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 3. POSTER RENDER
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = `${TMDB_IMAGE_BASE}${item.poster_path}?canvas=true`;
+      await new Promise(r => { img.onload = r; img.onerror = r; });
       
-      const maxWidth = 900;
-      const words = title.split(' ');
-      let line = '';
-      let lines = [];
-      
-      for (let n = 0; n < words.length; n++) {
-        let testLine = line + words[n] + ' ';
-        if (ctx.measureText(testLine).width > maxWidth && n > 0) {
-          lines.push(line.trim());
-          line = words[n] + ' ';
-        } else {
-          line = testLine;
-        }
-      }
-      lines.push(line.trim());
-      
-      if (lines.length === 2) {
-        let p = lines[0].split(' '), l = lines[1].split(' ');
-        if (l.length === 1 && p.length > 1) {
-          let m = p.pop();
-          lines[0] = p.join(' ');
-          lines[1] = m + ' ' + l[0];
-        }
+      const posterBottom = 1160;
+      if (img.complete) {
+        const pw = 640, px = (canvas.width - pw) / 2;
+        ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 70; ctx.shadowOffsetY = 30;
+        drawRoundedRect(ctx, px, 200, pw, 960, 45);
+        ctx.clip(); ctx.drawImage(img, px, 200, pw, 960);
+        ctx.restore();
       }
 
-      if (lines.length > 2) {
-        lines[1] = lines[1].trim() + '...';
-        lines = lines.slice(0, 2);
+      // 4. TEXT DISTRIBUTION (EQUIDISTANT)
+      const isTv = item.media_type === 'tv' || !item.title;
+      const showSE = isTv && showSeasonEpisode;
+      const titleSize = 70, titleLineHeight = 84, seHeight = 35, metaHeight = 72;
+      const internalTitleSeGap = 15; 
+      
+      // Measure lines using forced font face
+      ctx.font = fontOswald; 
+      const titleStr = (item.title || item.name).toUpperCase();
+      const lines = getBalancedLines(ctx, titleStr, 750);
+      const hTitle = lines.length * titleLineHeight;
+      
+      // areaBottom changed to 1640 to provide more "breath" beneath meta box
+      const areaTop = posterBottom, areaBottom = 1640; 
+      const totalAvailableHeight = areaBottom - areaTop;
+      const hGroupTitle = showSE ? (hTitle + internalTitleSeGap + seHeight) : hTitle;
+      const totalItemsHeight = hGroupTitle + metaHeight;
+      const gap = (totalAvailableHeight - totalItemsHeight) / 3;
+      
+      let currentY = areaTop + gap;
+
+      // Draw Title (FORCE OSWALD)
+      ctx.textBaseline = 'top'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
+      ctx.font = fontOswald; 
+      ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 15;
+      lines.forEach((l, idx) => { ctx.fillText(l.trim(), canvas.width / 2, currentY + (idx * titleLineHeight)); });
+      ctx.shadowBlur = 0; currentY += hTitle;
+
+      // Draw SE (INTER)
+      if (showSE) {
+        currentY += internalTitleSeGap;
+        ctx.font = fontInterReg; 
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.fillText(`S${season.toString().padStart(2, '0')} E${episode.toString().padStart(2, '0')}`, canvas.width / 2, currentY);
+        currentY += seHeight;
       }
 
-      let textY = lines.length === 1 ? 1290 : 1255;
-      lines.forEach((l) => {
-        ctx.fillText(l.trim(), canvas.width / 2, textY);
-        textY += 70;
-      });
+      // Draw Meta Box (INTER)
+      currentY += gap;
+      const yearTxt = (item.release_date || item.first_air_date || 'N/A').split('-')[0];
+      const ratingTxt = `★ ${item.vote_average.toFixed(1)}`;
+      const typeTxt = isTv ? 'SERIES' : 'MOVIE';
+      ctx.font = fontInterBold;
+      const yearW = ctx.measureText(yearTxt).width, ratingW = ctx.measureText(ratingTxt).width, typeW = ctx.measureText(typeTxt).width;
+      const dotSpace = 44, totalTextW = yearW + ratingW + typeW + (dotSpace * 2);
+      const boxW = totalTextW + 90, boxH = metaHeight, boxX = (canvas.width - boxW) / 2;
       
-      ctx.font = '36px sans-serif';
-      ctx.fillStyle = '#a3a3a3';
-      const date = item.release_date || item.first_air_date || 'N/A';
-      const year = date.split('-')[0];
-      const type = item.media_type === 'tv' ? 'SERIES' : 'MOVIE';
-      ctx.fillText(`${year}  •  ${type}  •  ★ ${item.vote_average.toFixed(1)}`, canvas.width / 2, textY + 15);
+      ctx.save();
+      drawRoundedRect(ctx, boxX, currentY, boxW, boxH, 36);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; ctx.stroke();
+      
+      let detailX = boxX + 45; const textBaselineY = currentY + (boxH / 2);
+      ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+      ctx.fillStyle = '#ffffff'; ctx.fillText(yearTxt, detailX, textBaselineY); detailX += yearW + dotSpace/2;
+      ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.beginPath(); ctx.arc(detailX, textBaselineY, 4.5, 0, Math.PI * 2); ctx.fill(); detailX += dotSpace/2;
+      ctx.fillStyle = '#facc15'; ctx.fillText(ratingTxt, detailX, textBaselineY); detailX += ratingW + dotSpace/2;
+      ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.beginPath(); ctx.arc(detailX, textBaselineY, 4.5, 0, Math.PI * 2); ctx.fill(); detailX += dotSpace/2;
+      ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillText(typeTxt, detailX, textBaselineY); ctx.restore();
 
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
-      setGenerating(false);
-      return blob;
-    } catch (e) {
-      console.error(e);
-      setGenerating(false);
-    }
+      // 5. FOOTER LOGO DISTANCE ADJUSTMENT
+      const attrImg = new Image(); attrImg.src = 'render.png';
+      await new Promise(r => { attrImg.onload = r; attrImg.onerror = r; });
+      if (attrImg.complete) {
+        const aWidth = 540, aHeight = (attrImg.height / attrImg.width) * aWidth;
+        ctx.save(); ctx.globalAlpha = 0.2;
+        // Moved footer slightly lower to maintain clean gap
+        ctx.drawImage(attrImg, (canvas.width - aWidth) / 2, 1830 - (aHeight / 2), aWidth, aHeight);
+        ctx.restore();
+      }
+
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.95));
+      setGenerating(false); return blob;
+    } catch (e) { console.error(e); setGenerating(false); }
   };
 
   const handleShare = async (item) => {
     const blob = await generateStoryImage(item);
     if (!blob) return;
-    const title = item.title || item.name;
-    const file = new File([blob], `story-${item.id}.jpg`, { type: 'image/jpeg' });
-
+    const file = new File([blob], `watchshare-${item.id}.jpg`, { type: 'image/jpeg' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: title }); }
-      catch (err) { downloadImage(blob, title); }
-    } else {
-      downloadImage(blob, title);
-    }
+      try { await navigator.share({ files: [file], title: item.title || item.name }); }
+      catch (err) { downloadImage(blob, item.title || item.name); }
+    } else { downloadImage(blob, item.title || item.name); }
   };
 
   const downloadImage = (blob, title) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `story-${title.replace(/\s+/g, '-').toLowerCase()}.jpg`;
-    a.click();
+    a.href = url; a.download = `watchshare-${title.toLowerCase().replace(/\s+/g, '-')}.jpg`; a.click();
     URL.revokeObjectURL(url);
   };
 
+  const isTvSelected = selectedItem && (selectedItem.media_type === 'tv' || !selectedItem.title);
+
   return (
-    <div className="min-h-screen bg-black text-white font-sans selection:bg-blue-500">
-      <header className="sticky top-0 z-30 bg-black/80 backdrop-blur-lg px-5 py-4 flex items-center justify-between border-b border-white/5">
+    <div className="min-h-screen bg-black text-white flex flex-col font-inter relative selection:bg-white selection:text-black">
+      {/* Hidden elements to force browser to load fonts immediately */}
+      <div className="opacity-0 absolute -z-50 pointer-events-none overflow-hidden h-0 w-0">
+        <span style={{ fontFamily: 'Oswald', fontWeight: 300 }}>Font Loader Oswald</span>
+        <span style={{ fontFamily: 'Inter', fontWeight: 500 }}>Font Loader Inter</span>
+      </div>
+
+      <header className="sticky top-0 z-30 bg-black/90 backdrop-blur-xl px-6 py-5 flex items-center justify-between border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div className="bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-600/20">
-            <Film size={22} className="text-white" />
-          </div>
-          <h1 className="font-black text-xl tracking-tighter uppercase">Watchshare</h1>
+          <img src="header.png" alt="WatchShare" className="h-7 sm:h-8 w-auto object-contain" />
         </div>
-        <button onClick={() => setShowSettings(true)} className="p-2.5 bg-neutral-900 rounded-full border border-white/5">
-          <Settings size={20} className="text-neutral-400" />
-        </button>
+        <div className="flex items-center gap-2">
+            <a href="https://ko-fi.com/mchammadr_" target="_blank" className="flex items-center gap-2 px-4 py-2 bg-pink-600/20 hover:bg-pink-600/30 text-pink-400 rounded-full border border-pink-500/30 transition-all text-[11px] sm:text-xs font-bold">
+                <Heart size={14} className="fill-pink-400 text-pink-400" />
+                <span className="hidden sm:inline">Support</span>
+            </a>
+            <button onClick={() => setShowSettings(true)} className="p-2.5 bg-white/5 rounded-full hover:bg-white/10 border border-white/5 transition-colors">
+                <Settings size={20} className="text-neutral-300" />
+            </button>
+        </div>
       </header>
 
-      <main className="max-w-3xl mx-auto p-4 pb-24">
-        <form onSubmit={searchMulti} className="relative mb-10 mt-4">
-          <input
-            type="text"
-            placeholder="Search for movies or tv series..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="w-full bg-neutral-900/50 border border-white/10 rounded-2xl py-5 pl-14 pr-6 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all text-lg"
-          />
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-500" size={24} />
+      <main className="max-w-4xl mx-auto p-6 flex-grow w-full pb-24">
+        <form onSubmit={searchAll} className="relative mb-12 mt-2">
+          <input type="text" placeholder="Search movies or tv series..." value={query} onChange={(e) => setQuery(e.target.value)} className="w-full bg-neutral-900/50 border border-white/10 rounded-3xl py-5 pl-14 pr-6 focus:ring-2 focus:ring-white outline-none text-lg transition-all shadow-2xl" />
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-400" size={24} />
         </form>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-32 gap-6">
-            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          </div>
+          <div className="flex flex-col items-center justify-center py-32 gap-6"><div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"></div></div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
-            {results.map(item => (
-              <div 
-                key={`${item.media_type}-${item.id}`} 
-                onClick={() => setSelectedItem(item)}
-                className="group relative aspect-[2/3] bg-neutral-900 rounded-2xl overflow-hidden cursor-pointer hover:ring-2 ring-blue-600 transition-all shadow-xl"
-              >
-                {item.poster_path ? (
-                  <img src={`${TMDB_IMAGE_BASE}${item.poster_path}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-neutral-600 bg-neutral-900
+          <div className="space-y-16 pb-20">
+            {movies.length > 0 && (
+                <section>
+                    <div className="flex justify-between items-end mb-6">
+                        <h2 className="text-2xl font-oswald font-light uppercase tracking-wide text-white/90">Movies</h2>
+                        <button onClick={() => setShowAllMovies(!showAllMovies)} className="text-xs font-inter font-bold text-neutral-500 hover:text-white uppercase tracking-wider transition-colors pb-1">{showAllMovies ? 'Show Less' : 'Show All'}</button>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {(showAllMovies ? movies : movies.slice(0, 5)).map(item => (
+                            <div key={`movie-${item.id}`} onClick={() => setSelectedItem(item)} className="group relative aspect-[2/3] bg-neutral-900 rounded-2xl overflow-hidden cursor-pointer border border-white/5 hover:border-white/20 transition-all transform active:scale-95">
+                                <img src={`${TMDB_IMAGE_BASE}${item.poster_path}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
+                                <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-black border border-white/10 uppercase">MOVIE</div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+            {series.length > 0 && (
+                <section>
+                    <div className="flex justify-between items-end mb-6">
+                        <h2 className="text-2xl font-oswald font-light uppercase tracking-wide text-white/90">TV Series</h2>
+                        <button onClick={() => setShowAllSeries(!showAllSeries)} className="text-xs font-inter font-bold text-neutral-500 hover:text-white uppercase tracking-wider transition-colors pb-1">{showAllSeries ? 'Show Less' : 'Show All'}</button>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {(showAllSeries ? series : series.slice(0, 5)).map(item => (
+                            <div key={`tv-${item.id}`} onClick={() => setSelectedItem(item)} className="group relative aspect-[2/3] bg-neutral-900 rounded-2xl overflow-hidden cursor-pointer border border-white/5 hover:border-white/20 transition-all transform active:scale-95">
+                                <img src={`${TMDB_IMAGE_BASE}${item.poster_path}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
+                                <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-black border border-white/10 uppercase">TV</div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+          </div>
+        )}
+      </main>
+
+      {showSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/95 backdrop-blur-md">
+          <div className="bg-neutral-900 w-full max-w-sm rounded-[2.5rem] p-10 border border-white/10 shadow-2xl animate-slide-up">
+            <div className="flex justify-center mb-8"><img src="header.png" className="h-12 w-auto" alt="Logo" /></div>
+            <h2 className="text-2xl font-oswald font-light mb-3 text-center uppercase tracking-tighter text-white">API Setup</h2>
+            <p className="text-sm text-neutral-400 mb-8 text-center leading-relaxed font-inter">Please enter your TMDB API Key.<br />Get it for free at <a href="https://www.themoviedb.org/settings/api" target="_blank" className="text-white underline font-bold">The Movie DB</a>.</p>
+            <input type="password" placeholder="Paste API Key here..." value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="w-full bg-black border border-white/10 rounded-2xl p-5 mb-8 focus:ring-1 focus:ring-white outline-none transition-all text-center text-white" />
+            <button onClick={() => saveApiKey(apiKey)} className="w-full py-5 bg-white text-black rounded-2xl font-bold uppercase active:scale-95 transition-all tracking-wider font-inter">GET STARTED</button>
+          </div>
+        </div>
+      )}
+
+      {selectedItem && (
+        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-lg flex flex-col items-center justify-start p-4 overflow-y-auto">
+          <button onClick={() => { 
+            setSelectedItem(null); 
+            try {
+              window.history.replaceState({}, document.title, window.location.pathname);
+            } catch (e) {
+              console.warn("URL cleanup prevented by environment policy.");
+            }
+          }} className="absolute top-6 right-6 p-3 bg-white/10 rounded-full hover:bg-white/20 transition-all z-50 border border-white/10"><X size={24} /></button>
+          
+          <div className="w-full max-w-sm flex flex-col gap-6 pt-16 pb-12 animate-slide-up scale-[0.9] sm:scale-100 origin-top">
+            <div className="relative aspect-[9/16] w-full rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl bg-neutral-950" style={{ backgroundColor: bgColor }}>
+                <div className="absolute inset-0 transition-opacity" style={{ opacity: 0.45 }}>
+                    <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/t/p/w780${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${selectedItem.poster_path}`} className="absolute inset-0 w-full h-full object-cover blur-2xl scale-125" />
+                </div>
+                <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, rgba(${hexToRgb(bgColor)}, ${bgOpacity * 0.1}), rgba(${hexToRgb(bgColor)}, ${bgOpacity}))` }}></div>
+                
+                <div className="absolute inset-0 flex flex-col items-center">
+                    <div className="mt-[18.5%] w-[59.25%] aspect-[2/3] rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl shrink-0">
+                        <img src={`${TMDB_IMAGE_BASE}${selectedItem.poster_path}`} className="w-full h-full object-cover" />
+                    </div>
+                    
+                    <div className="flex-grow flex flex-col justify-around py-4 px-10 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                            <h3 className="text-[1.85rem] font-light leading-tight uppercase text-white font-oswald drop-shadow-md text-center max-w-[90%]" style={{ textWrap: 'balance' }}>
+                                {(selectedItem.title || selectedItem.name)}
+                            </h3>
+                            {isTvSelected && showSeasonEpisode && (
+                                <p className="text-[0.65rem] font-medium text-white/50 font-inter tracking-widest uppercase">
+                                    S{season.toString().padStart(2, '0')} E{episode.toString().padStart(2, '0')}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="inline-flex items-center gap-[4%] bg-white/10 backdrop-blur-md px-6 py-2.5 rounded-full font-inter border border-white/15 whitespace-nowrap shadow-sm mx-auto">
+                            <span className="text-white text-[0.8rem] font-medium tracking-tight">{(selectedItem.release_date || selectedItem.first_air_date || '').split('-')[0]}</span>
+                            <span className="w-1 h-1 bg-white/40 rounded-full shrink-0"></span>
+                            <span className="text-yellow-400 text-[0.8rem] font-bold tracking-tight">★ {selectedItem.vote_average?.toFixed(1) || '0.0'}</span>
+                            <span className="w-1 h-1 bg-white/40 rounded-full shrink-0"></span>
+                            <span className="text-white/60 text-[0.8rem] font-medium uppercase tracking-tight">{isTvSelected ? 'SERIES' : 'MOVIE'}</span>
+                        </div>
+
+                        <div className="h-5 opacity-20"><img src="render.png" className="h-4 w-auto mx-auto object-contain" /></div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex flex-col gap-3 w-full">
+                {isTvSelected && (
+                    <div className="flex flex-col gap-3 bg-white/5 backdrop-blur-xl px-6 py-4 rounded-[2rem] border border-white/10 shadow-xl w-full">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2"><Tv size={16} className="text-neutral-400" /><span className="text-xs font-bold text-neutral-300 uppercase font-inter tracking-wide">TV Details</span></div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" className="sr-only peer" checked={showSeasonEpisode} onChange={() => setShowSeasonEpisode(!showSeasonEpisode)} />
+                                <div className="w-11 h-6 bg-neutral-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                            </label>
+                        </div>
+                        {showSeasonEpisode && (
+                            <div className="flex items-center gap-3 animate-slide-up">
+                                <select value={season} onChange={(e) => setSeason(parseInt(e.target.value))} className="flex-1 bg-white/10 border border-white/10 rounded-xl py-2 px-3 text-center font-bold text-sm text-white outline-none">
+                                    {tvDetails.seasons && tvDetails.seasons.filter(s => s.season_number > 0).map(s => (<option key={s.id} value={s.season_number} className="bg-neutral-900">S{s.season_number.toString().padStart(2, '0')}</option>))}
+                                </select>
+                                <select value={episode} onChange={(e) => setEpisode(parseInt(e.target.value))} className="flex-1 bg-white/10 border border-white/10 rounded-xl py-2 px-3 text-center font-bold text-sm text-white outline-none">
+                                    {Array.from({ length: availableEpisodes }, (_, i) => i + 1).map(num => (<option key={num} value={num} className="bg-neutral-900">E{num.toString().padStart(2, '0')}</option>))}
+                                </select>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                <div className="flex items-center justify-between bg-white/5 backdrop-blur-xl px-6 py-4 rounded-[2rem] border border-white/10 shadow-xl w-full">
+                    <div className="flex items-center gap-3"><div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white shadow-lg"><input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="absolute -top-2 -left-2 w-12 h-12 cursor-pointer" /></div><span className="text-xs font-bold text-neutral-300 uppercase font-inter">Color</span></div>
+                    <div className="w-[1px] h-6 bg-white/20"></div>
+                    <div className="flex items-center gap-3"><span className="text-xs font-bold text-neutral-300 uppercase font-inter">Opacity</span><input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-20 md:w-28 accent-white cursor-pointer" /></div>
+                </div>
+
+                <button onClick={() => handleShare(selectedItem)} disabled={generating} className="relative w-full py-5 bg-white text-black rounded-[2rem] font-bold text-xl active:scale-95 transition-all shadow-2xl uppercase flex items-center justify-center gap-3 overflow-hidden font-inter tracking-wider">
+                    {generating ? <div className="w-6 h-6 border-4 border-black/20 border-t-black rounded-full animate-spin"></div> : <><Share2 size={24} /><span>Share to Story</span></>}
+                </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <canvas ref={canvasRef} className="hidden" />
+      <footer className="bg-black py-8 border-t border-white/5 flex flex-col items-center gap-2">
+          <img src="attribution.png" className="h-5 opacity-40 grayscale" />
+          <p className="text-[10px] text-neutral-600 uppercase font-medium">This product uses the TMDB API but is not endorsed by TMDB.</p>
+      </footer>
+    </div>
+  );
+};
+
+export default App;
