@@ -21,8 +21,10 @@
         document.write('<link rel="manifest" href="' + manifestUrl + '">');
         
         if ('serviceWorker' in navigator) {
-            const swBlob = new Blob(["self.addEventListener('fetch', function(e) {});"], { type: 'application/javascript' });
-            navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
+            window.addEventListener('load', () => {
+                const swBlob = new Blob(["self.addEventListener('fetch', function(e) {});"], { type: 'application/javascript' });
+                navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
+            });
         }
     </script>
 
@@ -125,13 +127,23 @@
 
             const canvasRef = useRef(null);
 
+            // Robust PWA Install Logic
             useEffect(() => {
                 const handleBeforeInstall = (e) => {
                     e.preventDefault();
                     setInstallPrompt(e);
                 };
+                const handleAppInstalled = () => {
+                    setInstallPrompt(null);
+                };
+
                 window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-                return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+                window.addEventListener('appinstalled', handleAppInstalled);
+
+                return () => {
+                    window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+                    window.removeEventListener('appinstalled', handleAppInstalled);
+                };
             }, []);
 
             useEffect(() => {
@@ -153,7 +165,6 @@
                     const data = await res.json();
                     setTvDetails(data);
                     
-                    // Set default to LATEST season
                     if (data.seasons && data.seasons.length > 0) {
                         const validSeasons = data.seasons.filter(s => s.season_number > 0);
                         if (validSeasons.length > 0) {
@@ -178,9 +189,8 @@
                     const data = await res.json();
                     if (data.episodes) {
                         setAvailableEpisodes(data.episodes.length);
-                        setEpisode(1); // Default episode 1
+                        setEpisode(1); 
                     }
-                    // Update season poster path
                     setSeasonPoster(data.poster_path);
                 } catch (err) { 
                     console.error("Season Data Fetch Error:", err); 
