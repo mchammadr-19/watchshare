@@ -97,8 +97,11 @@
         };
 
         const App = () => {
-            const [apiKey, setApiKey] = useState(localStorage.getItem('tmdb_key') || '');
-            const [showSettings, setShowSettings] = useState(!localStorage.getItem('tmdb_key'));
+            // --- REPLACE 'YOUR_API_KEY_HERE' WITH YOUR ACTUAL TMDB API KEY ---
+            const MY_KEY = 'YOUR_API_KEY_HERE'; 
+            
+            const [apiKey, setApiKey] = useState(MY_KEY !== 'YOUR_API_KEY_HERE' ? MY_KEY : (localStorage.getItem('tmdb_key') || ''));
+            const [showSettings, setShowSettings] = useState(apiKey === '' && MY_KEY === 'YOUR_API_KEY_HERE');
             const [query, setQuery] = useState('');
             const [movies, setMovies] = useState([]);
             const [series, setSeries] = useState([]);
