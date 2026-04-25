@@ -175,14 +175,12 @@
 
             // 🚀 Strictly Native PWA Installer Logic
             useEffect(() => {
-                // Selalu tampilkan tombol jika tidak dibuka sebagai aplikasi (standalone)
                 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
                 if (!isStandalone) {
                     setCanInstall(true);
                 }
 
                 const checkPromptReady = (e) => {
-                    // Update deferredPrompt locally if event fired late
                     if (e && e.type === 'beforeinstallprompt') {
                         e.preventDefault();
                         window.deferredPrompt = e;
@@ -190,7 +188,6 @@
                 };
                 
                 checkPromptReady();
-
                 window.addEventListener('pwa-prompt-ready', checkPromptReady);
                 window.addEventListener('beforeinstallprompt', checkPromptReady);
 
@@ -300,7 +297,6 @@
                 finally { setLoading(false); setHasSearched(true); }
             };
 
-            // Fungsi untuk me-reset halaman ke tampilan awal (unsearched)
             const resetHome = () => {
                 setQuery('');
                 setMovies([]);
@@ -446,7 +442,6 @@
                     ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.beginPath(); ctx.arc(detailX, textBaselineY, 4.5, 0, Math.PI * 2); ctx.fill(); detailX += dotSpace/2;
                     ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillText(typeTxt, detailX, textBaselineY); ctx.restore();
 
-                    // --- NEW PERSONAL RATING RENDERING ---
                     if (personalRating > 0) {
                         const starOuter = 16;
                         const starInner = 7.5;
@@ -671,7 +666,7 @@
                             </div>
                             
                             <div className="w-full max-w-sm flex flex-col gap-6 pt-16 pb-12 animate-slide-up scale-[0.9] sm:scale-100 origin-top">
-                                <div className="relative aspect-[9/16] w-full rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl bg-neutral-950" style={{ backgroundColor: bgColor }}>
+                                <div className="relative aspect-[9/16] w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-neutral-950" style={{ backgroundColor: bgColor }}>
                                     <div className="absolute inset-0 transition-opacity" style={{ opacity: 0.45 }}>
                                         <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/t/p/w1280${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${activePoster}`} className="absolute inset-0 w-full h-full object-cover scale-[1.25] blur-[12px]" alt="" />
                                     </div>
@@ -683,27 +678,26 @@
                                                 <img src={`${TMDB_IMAGE_BASE}${activePoster}`} className="w-full h-full object-cover transition-all" alt="Poster Preview" />
                                             </div>
                                             
-                                            {/* Gear Button for Poster Selection - Aligned with border */}
+                                            {/* Gear Button for Poster Selection */}
                                             {isTvSelected && availablePosters.length > 1 && (
                                                 <div className="absolute top-6 right-0 translate-x-1/2 z-30 flex flex-col items-end">
                                                     <button 
                                                         onClick={() => setShowPosterPicker(!showPosterPicker)}
-                                                        className={`p-2 rounded-full transition-all shadow-xl border ${showPosterPicker ? 'bg-yellow-400 border-yellow-300 text-black scale-105' : 'text-white bg-black/60 backdrop-blur-md border-white/20 hover:bg-black/80 hover:scale-105 active:scale-95'}`}
+                                                        className={`w-9 h-9 rounded-full grid place-items-center transition-all shadow-xl border ${showPosterPicker ? 'bg-yellow-400 border-yellow-300 text-black scale-105' : 'text-white bg-black/60 backdrop-blur-md border-white/20 hover:bg-black/80 hover:scale-105 active:scale-95'}`}
                                                         title="Choose Poster"
                                                     >
-                                                        <Icon name="settings" size={18} />
+                                                        <Icon name="settings" size={18} className="shrink-0 transform translate-y-[0.5px] translate-x-[0.5px]" />
                                                     </button>
 
                                                     {/* Floating Scrollable Picker Menu */}
                                                     {showPosterPicker && (
-                                                        <div className="absolute top-14 right-0 w-28 sm:w-32 bg-neutral-900/95 backdrop-blur-xl border border-white/15 rounded-2xl p-2.5 shadow-2xl animate-slide-up flex flex-col origin-top-right">
+                                                        <div className="absolute top-12 right-0 w-28 sm:w-32 bg-neutral-900/95 backdrop-blur-xl border border-white/15 rounded-2xl p-2.5 shadow-2xl animate-slide-up flex flex-col origin-top-right">
                                                             <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10 shrink-0">
                                                                 <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 w-full text-center">Posters</span>
                                                             </div>
-                                                            {/* Scrollable Container */}
                                                             <div className="flex flex-col gap-2.5 overflow-y-auto overscroll-contain max-h-[220px] sm:max-h-[260px] pr-1 hide-scroll">
                                                                 {availablePosters.map(p => (
-                                                                    <div key={p.id} onClick={() => { setCustomPoster(p.path); setShowPosterPicker(false); }} className={`relative w-full aspect-[2/3] rounded-xl overflow-hidden cursor-pointer border-2 transition-all shrink-0 ${activePoster === p.path ? 'border-yellow-400 scale-[0.98] shadow-[0_0_15px_rgba(250,204,21,0.4)]' : 'border-transparent opacity-50 hover:opacity-100 hover:scale-[0.98]'}`}>
+                                                                    <div key={p.id} onClick={() => { setCustomPoster(p.path); setShowPosterPicker(false); }} className={`relative w-full aspect-[2/3] rounded-xl overflow-hidden cursor-pointer transition-all shrink-0 ${activePoster === p.path ? 'border-[3px] border-yellow-400 scale-[0.98]' : 'border-2 border-transparent opacity-50 hover:opacity-100 hover:scale-[0.98]'}`}>
                                                                         <img src={`${TMDB_IMAGE_BASE}${p.path}`} className="w-full h-full object-cover" />
                                                                         <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/80 to-transparent pt-8 pb-1.5 px-1 text-[8px] text-center font-bold text-white uppercase tracking-widest leading-tight">{p.label}</div>
                                                                     </div>
@@ -736,7 +730,6 @@
                                                 </div>
                                             </div>
 
-                                            {/* Preview Rating Stars */}
                                             {personalRating > 0 && (
                                                 <div className="flex items-center gap-1.5 mt-3.5 animate-slide-up">
                                                     {[1, 2, 3, 4, 5].map(star => (
@@ -802,7 +795,6 @@
                                         </div>
                                     )}
 
-                                    {/* Personal Rating Picker Control */}
                                     <div className="flex items-center justify-between bg-white/5 backdrop-blur-xl px-5 sm:px-6 py-4 rounded-[2rem] border border-white/10 shadow-xl w-full">
                                         <div className="flex items-center gap-2 shrink-0">
                                             <Icon name="star" size={16} className="text-neutral-400" />
@@ -855,13 +847,11 @@
                         </div>
                     )}
                     
-                    {/* Native Floating Install Button Only (Centered Wrapper) */}
                     {canInstall && !selectedItem && !hasEverSearched && query.trim() === '' && (
                         <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
                             <button 
                                 onClick={async () => { 
                                     const isIOSUser = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
-                                    
                                     if (isIOSUser) {
                                         setShowIosModal(true);
                                     } else if (window.deferredPrompt) {
