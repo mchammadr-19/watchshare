@@ -91,7 +91,6 @@
             display: none;
         }
 
-        /* Container Queries fallback to ensure text scales with container width */
         .story-container { container-type: inline-size; }
     </style>
 </head>
@@ -292,7 +291,6 @@
                 setCustomPoster(null); setShowPosterPicker(false); setPersonalRating(0);
             };
 
-            // GOLDEN RENDER LOGIC - DO NOT CHANGE
             const generateStoryImage = async (item) => {
                 setGenerating(true);
                 const canvas = canvasRef.current;
@@ -330,7 +328,8 @@
                     img.src = `${TMDB_IMAGE_BASE}${posterToUse}?canvas=true`;
                     await new Promise(r => { img.onload = r; img.onerror = r; });
                     if (img.complete) {
-                        const pw = 640, ph = 960, px = (canvas.width - pw) / 2, py = 200, radius = 45;
+                        const pw = 640, ph = 960, px = (canvas.width - pw) / 2, py = 200;
+                        const radius = 45; 
                         ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 70; ctx.shadowOffsetY = 30;
                         drawRoundedRect(ctx, px, py, pw, ph, radius); ctx.clip(); ctx.drawImage(img, px, py, pw, ph); ctx.restore();
                     }
@@ -384,7 +383,7 @@
                     await new Promise(r => { attrImg.onload = r; attrImg.onerror = r; });
                     if (attrImg.complete) {
                         const aWidth = 280, aHeight = (attrImg.height / attrImg.width) * aWidth;
-                        ctx.save(); ctx.globalAlpha = 0.2;
+                        ctx.save(); ctx.globalAlpha = 0.2; 
                         ctx.drawImage(attrImg, (canvas.width - aWidth) / 2, 1780 - (aHeight / 2), aWidth, aHeight); ctx.restore();
                     }
 
@@ -540,7 +539,7 @@
                         )}
                     </main>
 
-                    <footer className="mt-auto py-12 px-6 flex flex-col items-center gap-4 opacity-40 border-t border-white/5">
+                    <footer className="py-12 px-6 flex flex-col items-center gap-4 opacity-40 border-t border-white/5">
                         <img src="render.png" alt="TMDB Attribution" className="w-48 h-auto object-contain grayscale brightness-150" />
                         <p className="text-[10px] uppercase font-bold tracking-widest text-center text-white/60 max-w-xs leading-relaxed">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
                     </footer>
@@ -553,7 +552,7 @@
                             </div>
                             
                             <div className="w-full max-w-[440px] flex flex-col gap-6 pt-16 pb-12 animate-slide-up origin-top">
-                                {/* THE PREVIEW CONTAINER - STRICTLY 1:1 WITH RENDER COORDINATES */}
+                                {/* THE PREVIEW CONTAINER */}
                                 <div className="relative aspect-[9/16] w-full rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-neutral-950 story-container" style={{ backgroundColor: bgColor }}>
                                     <div className="absolute inset-0 z-0 pointer-events-none transition-opacity opacity-[0.45]">
                                         <img src={backdropUrl} className="absolute inset-0 w-full h-full object-cover scale-[1.25] blur-[12px]" />
@@ -563,7 +562,8 @@
                                     <div className="absolute inset-0 flex flex-col items-center z-[2]">
                                         {/* Poster Position: py=200/1920 = 10.41% FROM TOP */}
                                         <div className="absolute top-[10.41%] w-[59.25%] aspect-[2/3] shrink-0">
-                                            <div className="w-full h-full rounded-[2.8rem] overflow-hidden border border-white/10 shadow-2xl">
+                                            {/* RADIUS SINKRON DENGAN RENDER (4.17cqw setara dengan 45px/1080px) */}
+                                            <div className="w-full h-full overflow-hidden border border-white/10 shadow-2xl" style={{ borderRadius: '4.17cqw' }}>
                                                 <img src={`${TMDB_IMAGE_BASE}${activePoster}`} className="w-full h-full object-cover transition-all" />
                                             </div>
                                             
@@ -590,22 +590,17 @@
                                         
                                         {/* Title area matching currentY=1295/1920 = 67.44% FROM TOP */}
                                         <div className="absolute top-[67.44%] w-full flex flex-col items-center">
-                                            {/* Baseline alignment mimic with accurate line height and font size ratio (70/1080) */}
                                             <h3 className="font-normal uppercase text-white font-oswald drop-shadow-md text-center max-w-[85%] leading-tight" style={{ fontSize: '6.48cqw' }}>
                                                 {(selectedItem.title || selectedItem.name)}
                                             </h3>
                                             
                                             <div className="flex flex-col items-center w-full">
                                                 {isTvSelected && showSeasonEpisode && (
-                                                    /* Gap series: 45px (2.34% of height) */
                                                     <p className="font-medium text-white/50 font-inter tracking-[0.2em] uppercase mt-[1.5%]" style={{ fontSize: '2.22cqw' }}>
                                                         S{season.toString().padStart(2, '0')}{episode === 'none' ? "" : ` E${episode.toString().padStart(2, '0')}`}
                                                     </p>
                                                 )}
                                                 
-                                                {/* Info Box: boxH=72. Margin after text: 35px. 
-                                                    Height ratio: 72/1080 = 6.6% (relative to container width)
-                                                */}
                                                 <div className="inline-flex items-center justify-center bg-white/10 backdrop-blur-md rounded-full font-inter border border-white/15 mt-[3%] px-[4%] py-[1.8%]" style={{ height: '3.75cqh' }}>
                                                     <div className="flex items-center gap-3 font-medium whitespace-nowrap" style={{ fontSize: '3.14cqw' }}>
                                                         <span>{(selectedItem.release_date || selectedItem.first_air_date || '').split('-')[0]}</span>
@@ -617,7 +612,6 @@
                                                 </div>
 
                                                 {personalRating > 0 && (
-                                                    /* Gap stars: 45px. */
                                                     <div className="flex items-center gap-2 mt-[4.5%] animate-slide-up">
                                                         {[1, 2, 3, 4, 5].map(star => <Icon key={star} name="star" size={16} className={star <= personalRating ? "text-yellow-400 fill-yellow-400" : "text-white/30 fill-white/30"} />)}
                                                     </div>
@@ -625,7 +619,7 @@
                                             </div>
                                         </div>
 
-                                        {/* Footer Attribution y=1780. 1780/1920 = 92.7% position of center line */}
+                                        {/* Footer Attribution matching y=1780. 1780/1920 = 92.7% */}
                                         <div className="absolute bottom-[7.3%] left-0 right-0 flex justify-center opacity-20 pointer-events-none">
                                             <img src="render.png" alt="" className="w-[26%] h-auto object-contain" />
                                         </div>
