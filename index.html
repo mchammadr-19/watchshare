@@ -163,7 +163,7 @@
 
             const [showSeasonEpisode, setShowSeasonEpisode] = useState(false);
             const [season, setSeason] = useState(1);
-            const [episode, setEpisode] = useState(1); // 'none' means "Do Not Show Episode"
+            const [episode, setEpisode] = useState('none'); // Default to 'none' as requested
             const [tvDetails, setTvDetails] = useState({ seasons: [] });
             const [availableEpisodes, setAvailableEpisodes] = useState(1);
             const [customPoster, setCustomPoster] = useState(null);
@@ -255,7 +255,8 @@
                     const data = await res.json();
                     if (data.episodes) {
                         setAvailableEpisodes(data.episodes.length);
-                        setEpisode(1); 
+                        // Make 'none' default when switching season
+                        setEpisode('none'); 
                     }
                 } catch (err) { 
                     console.error("Season Data Fetch Error:", err); 
@@ -630,7 +631,7 @@
                         <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-lg flex flex-col items-center justify-start p-4 overflow-y-auto">
                             <div className="absolute top-6 inset-x-6 flex justify-between items-center z-50">
                                 <span className="text-white/30 font-inter font-semibold tracking-widest uppercase text-sm pl-2 pointer-events-none">Preview</span>
-                                <button onClick={() => {setSelectedItem(null); setSeason(1); setEpisode(1); setTvDetails({ seasons: [] }); setCustomPoster(null); setShowPosterPicker(false); setPersonalRating(0);}} className="p-2 text-white/60 hover:text-white transition-all"><Icon name="x" size={30} /></button>
+                                <button onClick={() => {setSelectedItem(null); setSeason(1); setEpisode('none'); setTvDetails({ seasons: [] }); setCustomPoster(null); setShowPosterPicker(false); setPersonalRating(0);}} className="p-2 text-white/60 hover:text-white transition-all"><Icon name="x" size={30} /></button>
                             </div>
                             
                             <div className="w-full max-sm flex flex-col gap-6 pt-16 pb-12 animate-slide-up scale-[0.9] sm:scale-100 origin-top">
@@ -749,15 +750,20 @@
                                                         <select 
                                                             value={episode} 
                                                             onFocus={() => setIsEpDropdownOpen(true)}
-                                                            onBlur={() => setIsEpDropdownOpen(false)}
+                                                            onBlur={() => {
+                                                                // Slight delay to ensure change event processes first
+                                                                setTimeout(() => setIsEpDropdownOpen(false), 100);
+                                                            }}
                                                             onChange={(e) => {
-                                                                setEpisode(e.target.value === 'none' ? 'none' : parseInt(e.target.value));
+                                                                const val = e.target.value;
+                                                                setEpisode(val === 'none' ? 'none' : parseInt(val));
+                                                                setIsEpDropdownOpen(false); // Close state explicitly on change
                                                                 e.target.blur(); // auto-close visual helper
                                                             }}
                                                             className="w-full bg-white/10 border border-white/10 rounded-xl py-2 px-3 text-center font-bold text-sm outline-none font-inter text-white"
                                                         >
                                                             <option value="none" className="bg-neutral-900 text-white italic">
-                                                                {isEpDropdownOpen ? "Do Not Show Episode" : (episode === 'none' ? "None" : "Do Not Show Episode")}
+                                                                {(isEpDropdownOpen || episode !== 'none') ? "Do Not Show Episode" : "None"}
                                                             </option>
                                                             {Array.from({ length: availableEpisodes }, (_, i) => i + 1).map(num => (
                                                                 <option key={num} value={num} className="bg-neutral-900 text-white">E{num.toString().padStart(2, '0')}</option>
