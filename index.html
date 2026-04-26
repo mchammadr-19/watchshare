@@ -58,7 +58,6 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        /* Added regular weights for Oswald */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Oswald:wght@200;300;400;500;700&display=swap');
         
         body { font-family: 'Inter', sans-serif; background-color: black; color: white; overflow-x: hidden; }
@@ -150,8 +149,15 @@
 
             const canvasRef = useRef(null);
             const suggestionRef = useRef(null);
+            const inputRef = useRef(null);
 
             useEffect(() => {
+                // Jangan jalankan timer saran jika sedang dalam proses loading atau sudah berhasil cari
+                if (loading) {
+                    setShowSuggestions(false);
+                    return;
+                }
+
                 const timer = setTimeout(() => {
                     if (query.trim().length > 2) {
                         fetchSuggestions(query.trim());
@@ -161,7 +167,7 @@
                     }
                 }, 300);
                 return () => clearTimeout(timer);
-            }, [query]);
+            }, [query, loading]);
 
             useEffect(() => {
                 const handleClickOutside = (e) => {
@@ -184,8 +190,11 @@
                             return date && date <= today;
                         })
                         .slice(0, 8); 
-                    setSuggestions(filtered);
-                    setShowSuggestions(filtered.length > 0);
+                    
+                    if (!loading) {
+                        setSuggestions(filtered);
+                        setShowSuggestions(filtered.length > 0);
+                    }
                 } catch (e) { console.error(e); }
             };
 
@@ -219,11 +228,17 @@
             const searchAll = async (e) => {
                 if (e) e.preventDefault();
                 if (!query || !apiKey) return;
+                
+                // FORCE HIDE & BLUR
+                setShowSuggestions(false);
+                setSuggestions([]);
+                if (inputRef.current) inputRef.current.blur(); // Melepaskan fokus input
+                
                 setLoading(true);
                 setError(null);
-                setShowSuggestions(false);
                 setHasSearched(false);
                 setHasEverSearched(true);
+                
                 try {
                     const [movieRes, tvRes] = await Promise.all([
                         fetch(`https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US&page=1`),
@@ -294,7 +309,6 @@
 
                     ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
                     const titleStr = (item.title || item.name).toUpperCase();
-                    // Keep 400 for Regular weight on story canvas
                     ctx.font = '400 70px Oswald, sans-serif';
                     const lines = getBalancedLines(ctx, titleStr, 750);
                     let currentY = 1295; 
@@ -436,6 +450,7 @@
                         <div className="relative mb-12 mt-2" ref={suggestionRef}>
                             <form onSubmit={searchAll}>
                                 <input 
+                                    ref={inputRef}
                                     type="text" 
                                     placeholder="Search movies or tv series..." 
                                     value={query} 
@@ -550,7 +565,6 @@
                                         </div>
                                         
                                         <div className="text-center w-full px-8 mt-[7%] flex flex-col items-center justify-center">
-                                            {/* Changed to font-normal for Regular feel on story canvas */}
                                             <h3 className="text-2xl font-normal leading-tight uppercase text-white font-oswald drop-shadow-md text-center max-w-[90%] mb-2">{(selectedItem.title || selectedItem.name)}</h3>
                                             {isTvSelected && showSeasonEpisode && (
                                                 <p className="text-[0.65rem] font-medium text-white/50 font-inter mb-4 tracking-widest uppercase">S{season.toString().padStart(2, '0')}{episode === 'none' ? "" : ` E${episode.toString().padStart(2, '0')}`}</p>
