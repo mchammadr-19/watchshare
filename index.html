@@ -250,7 +250,9 @@
                     const detailData = await res.json();
                     setTvDetails(detailData);
                     
-                    const airedSeasons = (detailData.seasons || []).filter(s => s.season_number > 0);
+                    const airedSeasons = (detailData.seasons || [])
+                        .filter(s => s.season_number > 0 && s.air_date && s.air_date <= today);
+
                     if (airedSeasons.length > 0) {
                         const latest = airedSeasons.reduce((prev, curr) => (prev.season_number > curr.season_number ? prev : curr));
                         setSeason(latest.season_number);
@@ -266,7 +268,9 @@
                     const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNum}?api_key=${apiKey}&language=en-US`);
                     const data = await res.json();
                     if (data.episodes) {
-                        setAvailableEpisodes(data.episodes.length);
+                        // Filter episodes that have already aired
+                        const releasedEpisodes = data.episodes.filter(ep => ep.air_date && ep.air_date <= today);
+                        setAvailableEpisodes(releasedEpisodes.length);
                         setEpisode('none');
                     }
                 } catch (err) { console.error(err); }
@@ -531,7 +535,8 @@
                 if (selectedItem.poster_path) availablePosters.push({ id: 'main', path: selectedItem.poster_path, label: 'Main Poster' });
                 if (isTvSelected && tvDetails.seasons) {
                     tvDetails.seasons.forEach(s => {
-                        if (s.poster_path && s.season_number > 0 && !availablePosters.find(p => p.path === s.poster_path)) {
+                        // Only include posters from seasons that have aired
+                        if (s.poster_path && s.season_number > 0 && s.air_date && s.air_date <= today && !availablePosters.find(p => p.path === s.poster_path)) {
                             availablePosters.push({ id: `s${s.season_number}`, path: s.poster_path, label: `Season ${s.season_number}` });
                         }
                     });
@@ -794,7 +799,9 @@
                                             {showSeasonEpisode && (
                                                 <div className="flex items-center gap-3 animate-slide-up">
                                                     <select value={season} onChange={(e) => setSeason(parseInt(e.target.value))} className="flex-1 bg-white/10 border border-white/10 rounded-xl py-2 px-3 text-center font-bold text-sm text-white">
-                                                        {(tvDetails.seasons || []).filter(s => s.season_number > 0).map(s => <option key={s.id} value={s.season_number} className="bg-neutral-900">S{s.season_number.toString().padStart(2, '0')}</option>)}
+                                                        {(tvDetails.seasons || [])
+                                                            .filter(s => s.season_number > 0 && s.air_date && s.air_date <= today)
+                                                            .map(s => <option key={s.id} value={s.season_number} className="bg-neutral-900">S{s.season_number.toString().padStart(2, '0')}</option>)}
                                                     </select>
                                                     <select value={episode} onChange={(e) => setEpisode(e.target.value === 'none' ? 'none' : parseInt(e.target.value))} className="flex-1 bg-white/10 border border-white/10 rounded-xl py-2 px-3 text-center font-bold text-sm text-white">
                                                         <option value="none" className="bg-neutral-900 italic">Episode</option>
