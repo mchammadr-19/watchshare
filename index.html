@@ -166,13 +166,12 @@
 
             const canvasRef = useRef(null);
             const suggestionRef = useRef(null);
-            const inputRef = useRef(inputRef);
+            const inputRef = useRef(null);
 
             const isTvSelected = selectedItem && (selectedItem.media_type === 'tv' || !selectedItem.title);
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
             useEffect(() => {
-                // Check if already installed
                 const checkInstalled = () => {
                     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
                     setIsInstalled(!!isStandalone);
@@ -328,6 +327,14 @@
                 if (outcome === 'accepted') setInstallPrompt(null);
             };
 
+            const getTruncatedTitlePart = (title) => {
+                const upperTitle = title.toUpperCase();
+                if (upperTitle.includes(':') || upperTitle.includes(',')) {
+                    return upperTitle.split(/[:|,]/)[0].trim();
+                }
+                return upperTitle;
+            };
+
             const generateStoryImage = async (item) => {
                 setGenerating(true);
                 const canvas = canvasRef.current;
@@ -372,17 +379,43 @@
                     }
 
                     ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
-                    const titleStr = (item.title || item.name).toUpperCase();
-                    ctx.font = '400 70px Oswald, sans-serif';
                     
-                    // UPDATED: Allow up to 3 lines for titles
-                    const lines = getBalancedLines(ctx, titleStr, 750);
+                    let titleStr = (item.title || item.name).toUpperCase();
+                    let fontSize = 70;
+                    ctx.font = `400 ${fontSize}px Oswald, sans-serif`;
+                    let lines = getBalancedLines(ctx, titleStr, 750);
                     
-                    // Dynamically calculate starting Y to center title better if it has 3 lines
-                    let currentY = lines.length > 2 ? 1260 : 1295; 
+                    while (lines.length > 3 && fontSize > 35) {
+                        fontSize -= 5;
+                        ctx.font = `400 ${fontSize}px Oswald, sans-serif`;
+                        lines = getBalancedLines(ctx, titleStr, 750);
+                    }
+                    
+                    if (lines.length > 3 && (titleStr.includes(':') || titleStr.includes(','))) {
+                        titleStr = getTruncatedTitlePart(titleStr);
+                        fontSize = 70; 
+                        ctx.font = `400 ${fontSize}px Oswald, sans-serif`;
+                        lines = getBalancedLines(ctx, titleStr, 750);
+                        
+                        while (lines.length > 3 && fontSize > 35) {
+                            fontSize -= 5;
+                            ctx.font = `400 ${fontSize}px Oswald, sans-serif`;
+                            lines = getBalancedLines(ctx, titleStr, 750);
+                        }
+                    }
+                    
+                    lines = lines.slice(0, 3);
+                    const lineHeight = fontSize + 12;
+                    const totalHeight = lines.length * lineHeight;
+                    // UPDATED: Added +20px gap between poster and title (1335 -> 1355)
+                    let currentY = 1355 - (totalHeight / 2); 
                     
                     ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 15; ctx.shadowOffsetY = 5;
-                    lines.forEach(l => { ctx.fillText(l.trim(), canvas.width / 2, currentY); currentY += 82; });
+                    lines.forEach(l => { 
+                        ctx.font = `400 ${fontSize}px Oswald, sans-serif`; 
+                        ctx.fillText(l.trim(), canvas.width / 2, currentY); 
+                        currentY += lineHeight; 
+                    });
                     ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
                     if (isTv && showSeasonEpisode) {
@@ -453,8 +486,7 @@
                     else { line = test; }
                 }
                 lines.push(line.trim());
-                // UPDATED: Increased slice limit to 3 to prevent title cutoff
-                return lines.slice(0, 3);
+                return lines;
             };
 
             const handleShare = async (item) => {
@@ -504,6 +536,18 @@
             const backdropUrl = selectedItem?.backdrop_path 
                 ? `https://image.tmdb.org/t/p/w1280${selectedItem.backdrop_path}` 
                 : `${TMDB_IMAGE_BASE}${activePoster}`;
+
+            const getPreviewTitle = (title) => {
+                const upper = title.toUpperCase();
+                if (upper.length > 55 && (upper.includes(':') || upper.includes(','))) {
+                    return upper.split(/[:|,]/)[0].trim();
+                }
+                return upper;
+            };
+
+            const previewTitle = selectedItem ? getPreviewTitle(selectedItem.title || selectedItem.name) : "";
+            const titleLength = previewTitle.length;
+            const previewTitleFontSize = titleLength > 40 ? '4.8cqw' : titleLength > 25 ? '5.6cqw' : '6.48cqw';
 
             return (
                 <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black flex flex-col font-inter relative">
@@ -693,8 +737,8 @@
                                         </div>
                                         
                                         <div className="absolute top-[67.44%] w-full flex flex-col items-center">
-                                            <h3 className="font-normal uppercase text-white font-oswald drop-shadow-md text-center max-w-[85%] leading-tight" style={{ fontSize: '6.48cqw' }}>
-                                                {(selectedItem.title || selectedItem.name)}
+                                            <h3 className="font-normal uppercase text-white font-oswald drop-shadow-md text-center max-w-[85%] leading-tight" style={{ fontSize: previewTitleFontSize }}>
+                                                {previewTitle}
                                             </h3>
                                             
                                             <div className="flex flex-col items-center w-full">
