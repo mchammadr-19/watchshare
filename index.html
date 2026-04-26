@@ -163,7 +163,7 @@
 
             const [showSeasonEpisode, setShowSeasonEpisode] = useState(false);
             const [season, setSeason] = useState(1);
-            const [episode, setEpisode] = useState(1);
+            const [episode, setEpisode] = useState(1); // 0 means "Do Not Show Episode"
             const [tvDetails, setTvDetails] = useState({ seasons: [] });
             const [seasonPoster, setSeasonPoster] = useState(null);
             const [availableEpisodes, setAvailableEpisodes] = useState(1);
@@ -411,7 +411,8 @@
                     if (isTv && showSeasonEpisode) {
                         ctx.font = '500 24px Inter, sans-serif';
                         ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-                        ctx.fillText(`S${season.toString().padStart(2, '0')} E${episode.toString().padStart(2, '0')}`, canvas.width / 2, currentY - 35);
+                        const epText = episode === 0 ? "" : ` E${episode.toString().padStart(2, '0')}`;
+                        ctx.fillText(`S${season.toString().padStart(2, '0')}${epText}`, canvas.width / 2, currentY - 35);
                         currentY += 45; 
                     } else {
                         currentY += 35;
@@ -528,23 +529,29 @@
 
             const isTvSelected = selectedItem && (selectedItem.media_type === 'tv' || !selectedItem.title);
             
+            // Available posters: exclude specials (0) and only allow if more than 1 season
             const availablePosters = [];
+            const validSeasons = tvDetails.seasons ? tvDetails.seasons.filter(s => s.season_number > 0) : [];
+            
             if (selectedItem && selectedItem.poster_path) {
                 availablePosters.push({ id: 'main', path: selectedItem.poster_path, label: 'Main Poster' });
             }
-            if (isTvSelected && tvDetails && tvDetails.seasons) {
-                tvDetails.seasons.forEach(s => {
+
+            // Only add season posters if there is more than 1 valid season
+            if (isTvSelected && validSeasons.length > 1) {
+                validSeasons.forEach(s => {
                     if (s.poster_path && !availablePosters.find(p => p.path === s.poster_path)) {
                         availablePosters.push({ 
                             id: `s${s.season_number}`, 
                             path: s.poster_path, 
-                            label: s.season_number === 0 ? 'Specials' : `Season ${s.season_number}` 
+                            label: `Season ${s.season_number}` 
                         });
                     }
                 });
             }
 
             const activePoster = customPoster || selectedItem?.poster_path || '';
+            const canChangePoster = isTvSelected && availablePosters.length > 1;
 
             return (
                 <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black flex flex-col font-inter relative">
@@ -618,45 +625,6 @@
                         </div>
                     </footer>
 
-                    {/* Error Modal */}
-                    {error && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm transition-opacity">
-                            <div className="bg-neutral-900 w-full max-w-xs rounded-[2rem] p-8 border border-red-500/30 shadow-[0_0_50px_rgba(239,68,68,0.2)] animate-slide-up text-center">
-                                <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/20">
-                                    <Icon name="alert" size={32} className="text-red-500" />
-                                </div>
-                                <h2 className="text-2xl font-oswald font-light mb-8 uppercase tracking-tighter">INVALID API KEY</h2>
-                                <div className="flex flex-col gap-3">
-                                    <button onClick={() => setError(null)} className="w-full py-4 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold uppercase text-xs transition-colors font-inter tracking-widest">
-                                        Close
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* iOS Manual Install Modal */}
-                    {showIosModal && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm transition-opacity">
-                            <div className="bg-neutral-900 w-full max-w-xs rounded-[2rem] p-8 border border-white/10 shadow-2xl animate-slide-up text-center relative">
-                                <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                                    <Icon name="share" size={32} className="text-white" />
-                                </div>
-                                <h2 className="text-2xl font-oswald font-light mb-4 uppercase tracking-tighter">Install on iOS</h2>
-                                <div className="text-sm font-inter mb-6 text-neutral-300">
-                                    <p className="mb-3">To install WatchShare as a native app:</p>
-                                    <ol className="text-left bg-black/50 p-4 rounded-xl list-decimal list-inside space-y-2 text-xs leading-relaxed">
-                                        <li>Tap the <strong>Share</strong> icon below.</li>
-                                        <li>Scroll down and select <strong>Add to Home Screen</strong>.</li>
-                                    </ol>
-                                </div>
-                                <button onClick={() => setShowIosModal(false)} className="w-full py-4 bg-white hover:bg-neutral-200 text-black rounded-xl font-bold uppercase text-xs transition-colors font-inter tracking-widest">
-                                    Got it
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
                     {/* Details/Preview Modal */}
                     {selectedItem && (
                         <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-lg flex flex-col items-center justify-start p-4 overflow-y-auto">
@@ -665,7 +633,7 @@
                                 <button onClick={() => {setSelectedItem(null); setSeason(1); setEpisode(1); setTvDetails({ seasons: [] }); setSeasonPoster(null); setCustomPoster(null); setShowPosterPicker(false); setPersonalRating(0);}} className="p-2 text-white/60 hover:text-white transition-all"><Icon name="x" size={30} /></button>
                             </div>
                             
-                            <div className="w-full max-w-sm flex flex-col gap-6 pt-16 pb-12 animate-slide-up scale-[0.9] sm:scale-100 origin-top">
+                            <div className="w-full max-sm flex flex-col gap-6 pt-16 pb-12 animate-slide-up scale-[0.9] sm:scale-100 origin-top">
                                 <div className="relative aspect-[9/16] w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-neutral-950" style={{ backgroundColor: bgColor }}>
                                     <div className="absolute inset-0 transition-opacity" style={{ opacity: 0.45 }}>
                                         <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/t/p/w1280${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${activePoster}`} className="absolute inset-0 w-full h-full object-cover scale-[1.25] blur-[12px]" alt="" />
@@ -678,8 +646,8 @@
                                                 <img src={`${TMDB_IMAGE_BASE}${activePoster}`} className="w-full h-full object-cover transition-all" alt="Poster Preview" />
                                             </div>
                                             
-                                            {/* Gear Button for Poster Selection */}
-                                            {isTvSelected && availablePosters.length > 1 && (
+                                            {/* Gear Button for Poster Selection - Only if canChangePoster is true */}
+                                            {canChangePoster && (
                                                 <div className="absolute top-6 right-0 translate-x-1/2 z-30 flex flex-col items-end">
                                                     <button 
                                                         onClick={() => setShowPosterPicker(!showPosterPicker)}
@@ -716,7 +684,7 @@
 
                                             {isTvSelected && showSeasonEpisode && (
                                                 <p className="text-[0.65rem] font-medium text-white/50 font-inter mb-[3.5%] tracking-widest uppercase">
-                                                    S{season.toString().padStart(2, '0')} E{episode.toString().padStart(2, '0')}
+                                                    S{season.toString().padStart(2, '0')}{episode === 0 ? "" : ` E${episode.toString().padStart(2, '0')}`}
                                                 </p>
                                             )}
                                             
@@ -785,6 +753,7 @@
                                                             onChange={(e) => setEpisode(parseInt(e.target.value))}
                                                             className="w-full bg-white/10 border border-white/10 rounded-xl py-2 px-3 text-center font-bold text-sm outline-none font-inter text-white"
                                                         >
+                                                            <option value={0} className="bg-neutral-900 text-white italic">Do Not Show Episode</option>
                                                             {Array.from({ length: availableEpisodes }, (_, i) => i + 1).map(num => (
                                                                 <option key={num} value={num} className="bg-neutral-900 text-white">E{num.toString().padStart(2, '0')}</option>
                                                             ))}
