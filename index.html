@@ -366,7 +366,6 @@
 
                     const bgImg = new Image();
                     bgImg.crossOrigin = "anonymous";
-                    // Fixed TMDB image URL typo (/t/p/ instead of /p/)
                     bgImg.src = item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}?canvas=true` : `${TMDB_IMAGE_BASE}${posterToUse}?canvas=true`;
                     await new Promise(r => { bgImg.onload = r; bgImg.onerror = r; });
                     if (bgImg.complete) {
@@ -391,8 +390,18 @@
                     if (img.complete) {
                         const pw = 640, ph = 960, px = (canvas.width - pw) / 2, py = 200;
                         const radius = 45; 
-                        ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 70; ctx.shadowOffsetY = 30;
-                        drawRoundedRect(ctx, px, py, pw, ph, radius); ctx.clip(); ctx.drawImage(img, px, py, pw, ph); ctx.restore();
+                        
+                        // Main Poster Body
+                        ctx.save(); 
+                        ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 70; ctx.shadowOffsetY = 30;
+                        drawRoundedRect(ctx, px, py, pw, ph, radius); 
+                        ctx.save(); ctx.clip(); ctx.drawImage(img, px, py, pw, ph); ctx.restore();
+                        
+                        // Add Poster Border matching metabox style
+                        ctx.lineWidth = 2;
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+                        ctx.stroke();
+                        ctx.restore();
                     }
 
                     ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
@@ -531,7 +540,6 @@
 
             const activePoster = customPoster || selectedItem?.poster_path || '';
             const canChangePoster = availablePosters.length > 1;
-            // Fixed TMDB image URL typo (/t/p/ instead of /p/)
             const backdropUrl = selectedItem?.backdrop_path 
                 ? `https://image.tmdb.org/t/p/w1280${selectedItem.backdrop_path}` 
                 : `${TMDB_IMAGE_BASE}${activePoster}`;
@@ -708,7 +716,7 @@
                                     
                                     <div className="absolute inset-0 flex flex-col items-center z-[2]">
                                         <div className="absolute top-[10.41%] w-[59.25%] aspect-[2/3] shrink-0">
-                                            <div className="w-full h-full overflow-hidden border border-white/10 shadow-2xl" style={{ borderRadius: '4.17cqw' }}>
+                                            <div className="w-full h-full overflow-hidden border border-white/15 shadow-2xl" style={{ borderRadius: '4.17cqw' }}>
                                                 <img src={`${TMDB_IMAGE_BASE}${activePoster}`} className="w-full h-full object-cover transition-all" />
                                             </div>
                                             
