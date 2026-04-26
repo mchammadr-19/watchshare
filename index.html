@@ -121,6 +121,8 @@
         };
 
         const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
+        const STORY_LOGO_URL = "https://raw.githubusercontent.com/mchammadr-19/watchshare/main/render.png";
+
         const hexToRgb = (hex) => {
             const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
             return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '0,0,0';
@@ -380,7 +382,9 @@
                         }
                     }
 
-                    const attrImg = new Image(); attrImg.src = 'attribution.svg';
+                    // UPDATED STORY LOGO FROM GITHUB RAW URL
+                    const attrImg = new Image(); attrImg.crossOrigin = "anonymous";
+                    attrImg.src = STORY_LOGO_URL;
                     await new Promise(r => { attrImg.onload = r; attrImg.onerror = r; });
                     if (attrImg.complete) {
                         const aWidth = 280, aHeight = (attrImg.height / attrImg.width) * aWidth;
@@ -540,6 +544,7 @@
                         )}
                     </main>
 
+                    {/* WEB FOOTER REMAINS AS REQUESTED (attribution.svg with tap interaction) */}
                     <footer className="py-12 px-6 flex flex-col items-center gap-4 border-t border-white/5">
                         <img 
                             src="attribution.svg" 
@@ -560,7 +565,7 @@
                             </div>
                             
                             <div className="w-full max-w-[440px] flex flex-col gap-6 pt-16 pb-12 animate-slide-up origin-top">
-                                {/* THE PREVIEW CONTAINER */}
+                                {/* THE PREVIEW CONTAINER - NOW USES GITHUB RAW RENDER.PNG */}
                                 <div className="relative aspect-[9/16] w-full rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-neutral-950 story-container" style={{ backgroundColor: bgColor }}>
                                     <div className="absolute inset-0 z-0 pointer-events-none transition-opacity opacity-[0.45]">
                                         <img src={backdropUrl} className="absolute inset-0 w-full h-full object-cover scale-[1.25] blur-[12px]" />
@@ -627,9 +632,9 @@
                                             </div>
                                         </div>
 
-                                        {/* Footer Attribution matching y=1780. 1780/1920 = 92.7% */}
+                                        {/* Footer Attribution matching y=1780. 1780/1920 = 92.7%. NOW USES GITHUB RAW RENDER.PNG */}
                                         <div className="absolute bottom-[7.3%] left-0 right-0 flex justify-center opacity-20 pointer-events-none">
-                                            <img src="attribution.svg" alt="" className="w-[26%] h-auto object-contain" />
+                                            <img src={STORY_LOGO_URL} alt="" className="w-[26%] h-auto object-contain" />
                                         </div>
                                     </div>
                                 </div>
