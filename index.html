@@ -17,11 +17,10 @@
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             window.deferredPrompt = e;
-            // Notify React immediately
             window.dispatchEvent(new CustomEvent('pwa-prompt-ready'));
         });
 
-        // Setup Manifest Dynamically via Data URI for better Chrome detection
+        // Setup Manifest Dynamically
         (() => {
             const manifest = {
                 "name": "WatchShare Story Editor",
@@ -41,7 +40,6 @@
             document.getElementById('manifest-placeholder').href = manifestUrl;
         })();
 
-        // Minimal Service Worker Registration to pass Chrome PWA criteria
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 const swCode = `
@@ -50,51 +48,33 @@
                     self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => new Response('Offline'))));
                 `;
                 const swBlob = new Blob([swCode], { type: 'application/javascript' });
-                navigator.serviceWorker.register(URL.createObjectURL(swBlob))
-                    .catch(err => console.log('SW Setup bypassed', err));
+                navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(err => console.log('SW Setup bypassed', err));
             });
         }
     </script>
 
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React & ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Oswald:wght@300;400;500;700&display=swap');
+        /* Added regular weights for Oswald */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Oswald:wght@200;300;400;500;700&display=swap');
         
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: black; 
-            color: white; 
-            overflow-x: hidden; 
-        }
-        
+        body { font-family: 'Inter', sans-serif; background-color: black; color: white; overflow-x: hidden; }
         .font-oswald { font-family: 'Oswald', sans-serif; }
         .font-inter { font-family: 'Inter', sans-serif; }
         
-        @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
         
-        @keyframes bounce-subtle {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
-        }
-        .animate-bounce-subtle { animation: bounce-subtle 3s infinite ease-in-out; }
-
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-
+        
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #000; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-
+        
         select {
             appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
@@ -120,7 +100,6 @@
                 tv: <><rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><polyline points="7 2 12 7 17 2"/></>,
                 film: <><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M17 3v18"/><path d="M3 7h4"/><path d="M3 12h18"/><path d="M3 17h4"/><path d="M17 17h4"/><path d="M17 7h4"/></>,
                 alert: <><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></>,
-                coffee: <path d="M17 8h1a4 4 0 1 1 0 8h-1M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z M6 2v2 M10 2v2 M14 2v2" />,
                 download: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />,
                 star: <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             };
@@ -132,7 +111,6 @@
         };
 
         const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
-
         const hexToRgb = (hex) => {
             const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
             return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '0,0,0';
@@ -140,11 +118,14 @@
 
         const App = () => {
             const MY_KEY = '0799284e10b09964527f237932e0290c'; 
-            
+            const today = new Date().toISOString().split('T')[0];
+
             const [apiKey] = useState(MY_KEY);
             const [query, setQuery] = useState('');
             const [movies, setMovies] = useState([]);
             const [series, setSeries] = useState([]);
+            const [suggestions, setSuggestions] = useState([]);
+            const [showSuggestions, setShowSuggestions] = useState(false);
             const [selectedItem, setSelectedItem] = useState(null);
             const [loading, setLoading] = useState(false);
             const [error, setError] = useState(null);
@@ -153,115 +134,86 @@
             const [bgOpacity, setBgOpacity] = useState(1);
             const [hasSearched, setHasSearched] = useState(false);
             const [hasEverSearched, setHasEverSearched] = useState(false);
-            
-            // Native PWA State Only
             const [canInstall, setCanInstall] = useState(false);
             const [showIosModal, setShowIosModal] = useState(false);
-            
             const [showAllMovies, setShowAllMovies] = useState(false);
             const [showAllSeries, setShowAllSeries] = useState(false);
-
             const [showSeasonEpisode, setShowSeasonEpisode] = useState(false);
             const [season, setSeason] = useState(1);
-            const [episode, setEpisode] = useState('none'); // Default to 'none' as requested
+            const [episode, setEpisode] = useState('none');
             const [tvDetails, setTvDetails] = useState({ seasons: [] });
             const [availableEpisodes, setAvailableEpisodes] = useState(1);
             const [customPoster, setCustomPoster] = useState(null);
             const [showPosterPicker, setShowPosterPicker] = useState(false);
             const [personalRating, setPersonalRating] = useState(0);
-
-            // State to track if episode dropdown is open
             const [isEpDropdownOpen, setIsEpDropdownOpen] = useState(false);
 
             const canvasRef = useRef(null);
+            const suggestionRef = useRef(null);
 
-            // 🚀 Strictly Native PWA Installer Logic
             useEffect(() => {
-                const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-                if (!isStandalone) {
-                    setCanInstall(true);
-                }
+                const timer = setTimeout(() => {
+                    if (query.trim().length > 2) {
+                        fetchSuggestions(query.trim());
+                    } else {
+                        setSuggestions([]);
+                        setShowSuggestions(false);
+                    }
+                }, 300);
+                return () => clearTimeout(timer);
+            }, [query]);
 
-                const checkPromptReady = (e) => {
-                    if (e && e.type === 'beforeinstallprompt') {
-                        e.preventDefault();
-                        window.deferredPrompt = e;
+            useEffect(() => {
+                const handleClickOutside = (e) => {
+                    if (suggestionRef.current && !suggestionRef.current.contains(e.target)) {
+                        setShowSuggestions(false);
                     }
                 };
-                
-                checkPromptReady();
-                window.addEventListener('pwa-prompt-ready', checkPromptReady);
-                window.addEventListener('beforeinstallprompt', checkPromptReady);
-
-                const handleAppInstalled = () => {
-                    setCanInstall(false);
-                    window.deferredPrompt = null;
-                };
-
-                window.addEventListener('appinstalled', handleAppInstalled);
-
-                return () => {
-                    window.removeEventListener('pwa-prompt-ready', checkPromptReady);
-                    window.removeEventListener('beforeinstallprompt', checkPromptReady);
-                    window.removeEventListener('appinstalled', handleAppInstalled);
-                };
+                document.addEventListener("mousedown", handleClickOutside);
+                return () => document.removeEventListener("mousedown", handleClickOutside);
             }, []);
 
-            useEffect(() => {
-                if (selectedItem && (selectedItem.media_type === 'tv' || !selectedItem.title)) {
-                    setCustomPoster(null);
-                    setShowPosterPicker(false);
-                    setPersonalRating(0);
-                    fetchTvData(selectedItem.id);
-                } else if (selectedItem) {
-                    setPersonalRating(0);
-                }
-            }, [selectedItem]);
-
-            useEffect(() => {
-                if (selectedItem && tvDetails.seasons && tvDetails.seasons.length > 0) {
-                    fetchSeasonData(selectedItem.id, season);
-                }
-            }, [season, tvDetails]);
+            const fetchSuggestions = async (q) => {
+                try {
+                    const res = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${apiKey}&query=${encodeURIComponent(q)}&language=en-US&page=1`);
+                    const data = await res.json();
+                    const filtered = (data.results || [])
+                        .filter(i => (i.media_type === 'movie' || i.media_type === 'tv') && i.poster_path)
+                        .filter(i => {
+                            const date = i.release_date || i.first_air_date;
+                            return date && date <= today;
+                        })
+                        .slice(0, 8); 
+                    setSuggestions(filtered);
+                    setShowSuggestions(filtered.length > 0);
+                } catch (e) { console.error(e); }
+            };
 
             const fetchTvData = async (id) => {
                 try {
                     const res = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=${apiKey}&language=en-US`);
-                    if (res.status === 401) throw new Error("Unauthorized: Invalid API Key.");
                     const data = await res.json();
                     setTvDetails(data);
-                    
-                    if (data.seasons && data.seasons.length > 0) {
-                        const validSeasons = data.seasons.filter(s => s.season_number > 0);
-                        if (validSeasons.length > 0) {
-                            const latestSeason = validSeasons.reduce((prev, current) => 
-                                (prev.season_number > current.season_number) ? prev : current
-                            );
-                            setSeason(latestSeason.season_number);
-                        } else {
-                            setSeason(data.seasons[0].season_number);
-                        }
+                    const airedSeasons = (data.seasons || []).filter(s => s.season_number > 0 && s.air_date && s.air_date <= today);
+                    if (airedSeasons.length > 0) {
+                        const latest = airedSeasons.reduce((prev, curr) => (prev.season_number > curr.season_number ? prev : curr));
+                        setSeason(latest.season_number);
+                    } else {
+                        setSeason(data.seasons?.[0]?.season_number || 1);
                     }
-                } catch (err) { 
-                    console.error("TV Data Fetch Error:", err); 
-                    setError(err.message);
-                }
+                    setEpisode('none');
+                } catch (err) { console.error(err); }
             };
 
             const fetchSeasonData = async (tvId, seasonNum) => {
                 try {
                     const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNum}?api_key=${apiKey}&language=en-US`);
-                    if (res.status === 401) throw new Error("Unauthorized: Invalid API Key.");
                     const data = await res.json();
                     if (data.episodes) {
                         setAvailableEpisodes(data.episodes.length);
-                        // Make 'none' default when switching season
-                        setEpisode('none'); 
+                        setEpisode('none');
                     }
-                } catch (err) { 
-                    console.error("Season Data Fetch Error:", err); 
-                    setError(err.message);
-                }
+                } catch (err) { console.error(err); }
             };
 
             const searchAll = async (e) => {
@@ -269,6 +221,7 @@
                 if (!query || !apiKey) return;
                 setLoading(true);
                 setError(null);
+                setShowSuggestions(false);
                 setHasSearched(false);
                 setHasEverSearched(true);
                 try {
@@ -276,98 +229,46 @@
                         fetch(`https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US&page=1`),
                         fetch(`https://api.themoviedb.org/3/search/tv?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US&page=1`)
                     ]);
-                    
-                    if (movieRes.status === 401 || tvRes.status === 401) {
-                        throw new Error("Invalid API Key.");
-                    }
-                    
                     const movieData = await movieRes.json();
                     const tvData = await tvRes.json();
                     
                     setMovies((movieData.results || [])
-                        .filter(i => i.poster_path)
+                        .filter(i => i.poster_path && i.release_date && i.release_date <= today)
                         .map(item => ({...item, media_type: 'movie'}))
-                        .slice(0, 20)
                     );
                     setSeries((tvData.results || [])
-                        .filter(i => i.poster_path)
+                        .filter(i => i.poster_path && i.first_air_date && i.first_air_date <= today)
                         .map(item => ({...item, media_type: 'tv'}))
-                        .slice(0, 20)
                     );
-                } catch (err) { 
-                    setError(err.message); 
-                }
+                } catch (err) { setError(err.message); }
                 finally { setLoading(false); setHasSearched(true); }
             };
 
             const resetHome = () => {
-                setQuery('');
-                setMovies([]);
-                setSeries([]);
-                setHasSearched(false);
-                setHasEverSearched(false);
-                setSelectedItem(null);
-                setError(null);
-                setShowAllMovies(false);
-                setShowAllSeries(false);
-                setCustomPoster(null);
-                setShowPosterPicker(false);
-                setPersonalRating(0);
-            };
-
-            const getBalancedLines = (ctx, text, maxWidth) => {
-                const words = text.split(' ');
-                let line = '';
-                let lines = [];
-                for (let n = 0; n < words.length; n++) {
-                    let testLine = line + words[n] + ' ';
-                    if (ctx.measureText(testLine).width > maxWidth && n > 0) {
-                        lines.push(line.trim());
-                        line = words[n] + ' ';
-                    } else { line = testLine; }
-                }
-                lines.push(line.trim());
-                if (lines.length === 2) {
-                    let lastLineWords = lines[1].split(' ');
-                    let prevLineWords = lines[0].split(' ');
-                    if (lastLineWords.length === 1 && prevLineWords.length > 1) {
-                        let movedWord = prevLineWords.pop();
-                        lines[0] = prevLineWords.join(' ');
-                        lines[1] = movedWord + ' ' + lastLineWords[0];
-                    }
-                }
-                return lines.slice(0, 2);
+                setQuery(''); setMovies([]); setSeries([]); setHasSearched(false); setHasEverSearched(false);
+                setSelectedItem(null); setError(null); setShowAllMovies(false); setShowAllSeries(false);
+                setCustomPoster(null); setShowPosterPicker(false); setPersonalRating(0);
             };
 
             const generateStoryImage = async (item) => {
                 setGenerating(true);
                 const canvas = canvasRef.current;
                 const ctx = canvas.getContext('2d');
-                canvas.width = 1080;
-                canvas.height = 1920;
-
-                const drawRoundedRect = (ctx, x, y, w, h, r) => {
-                    ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.closePath();
-                };
+                canvas.width = 1080; canvas.height = 1920;
+                const drawRoundedRect = (ctx, x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.closePath(); };
 
                 try {
                     ctx.fillStyle = bgColor;
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
                     const isTv = item.media_type === 'tv' || !item.title;
                     const posterToUse = customPoster || item.poster_path;
 
                     const bgImg = new Image();
                     bgImg.crossOrigin = "anonymous";
-                    bgImg.src = item.backdrop_path 
-                        ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}?canvas=true`
-                        : `${TMDB_IMAGE_BASE}${posterToUse}?canvas=true`;
-
+                    bgImg.src = item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}?canvas=true` : `${TMDB_IMAGE_BASE}${posterToUse}?canvas=true`;
                     await new Promise(r => { bgImg.onload = r; bgImg.onerror = r; });
                     if (bgImg.complete) {
-                        ctx.save();
-                        ctx.globalAlpha = 0.45;
-                        ctx.filter = 'blur(25px)';
+                        ctx.save(); ctx.globalAlpha = 0.45; ctx.filter = 'blur(25px)';
                         const scale = Math.max(canvas.width / bgImg.width, canvas.height / bgImg.height);
                         const x = (canvas.width / 2) - (bgImg.width / 2) * scale;
                         const y = (canvas.height / 2) - (bgImg.height / 2) * scale;
@@ -379,8 +280,7 @@
                     const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
                     grad.addColorStop(0, `rgba(${rgbColor}, ${bgOpacity * 0.1})`);
                     grad.addColorStop(1, `rgba(${rgbColor}, ${bgOpacity})`);
-                    ctx.fillStyle = grad;
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                     const img = new Image();
                     img.crossOrigin = "anonymous";
@@ -388,55 +288,37 @@
                     await new Promise(r => { img.onload = r; img.onerror = r; });
                     if (img.complete) {
                         const pw = 640, ph = 960, px = (canvas.width - pw) / 2, py = 200, radius = 45;
-                        ctx.save();
-                        ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 70; ctx.shadowOffsetY = 30;
-                        drawRoundedRect(ctx, px, py, pw, ph, radius);
-                        ctx.clip();
-                        ctx.drawImage(img, px, py, pw, ph);
-                        ctx.restore();
+                        ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 70; ctx.shadowOffsetY = 30;
+                        drawRoundedRect(ctx, px, py, pw, ph, radius); ctx.clip(); ctx.drawImage(img, px, py, pw, ph); ctx.restore();
                     }
 
                     ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
                     const titleStr = (item.title || item.name).toUpperCase();
-                    ctx.font = '300 70px Oswald, sans-serif';
-                    
+                    // Keep 400 for Regular weight on story canvas
+                    ctx.font = '400 70px Oswald, sans-serif';
                     const lines = getBalancedLines(ctx, titleStr, 750);
                     let currentY = 1295; 
-                    const titleLineHeight = 82;
-
                     ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 15; ctx.shadowOffsetY = 5;
-                    lines.forEach(l => {
-                        ctx.fillText(l.trim(), canvas.width / 2, currentY);
-                        currentY += titleLineHeight;
-                    });
+                    lines.forEach(l => { ctx.fillText(l.trim(), canvas.width / 2, currentY); currentY += 82; });
                     ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
                     if (isTv && showSeasonEpisode) {
-                        ctx.font = '500 24px Inter, sans-serif';
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                        ctx.font = '500 24px Inter, sans-serif'; ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
                         const epText = episode === 'none' ? "" : ` E${episode.toString().padStart(2, '0')}`;
                         ctx.fillText(`S${season.toString().padStart(2, '0')}${epText}`, canvas.width / 2, currentY - 35);
                         currentY += 45; 
-                    } else {
-                        currentY += 35;
-                    }
+                    } else { currentY += 35; }
 
                     ctx.font = '500 34px Inter, sans-serif';
                     const yearTxt = (item.release_date || item.first_air_date || 'N/A').split('-')[0];
                     const ratingTxt = `★ ${item.vote_average.toFixed(1)}`;
                     const typeTxt = isTv ? 'SERIES' : 'MOVIE';
-                    
                     const yearW = ctx.measureText(yearTxt).width, ratingW = ctx.measureText(ratingTxt).width, typeW = ctx.measureText(typeTxt).width;
                     const dotSpace = 44, totalTextW = yearW + ratingW + typeW + (dotSpace * 2);
-                    const boxW = totalTextW + 90, boxH = 72, boxX = (canvas.width - boxW) / 2, boxRadius = 36;
-                    
-                    const boxY = currentY - 50;
+                    const boxW = totalTextW + 90, boxH = 72, boxX = (canvas.width - boxW) / 2, boxRadius = 36, boxY = currentY - 50;
 
-                    ctx.save();
-                    drawRoundedRect(ctx, boxX, boxY, boxW, boxH, boxRadius);
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; ctx.fill();
-                    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; ctx.stroke();
-                    ctx.restore();
+                    ctx.save(); drawRoundedRect(ctx, boxX, boxY, boxW, boxH, boxRadius); ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; ctx.fill();
+                    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; ctx.stroke(); ctx.restore();
 
                     let detailX = boxX + 45; const textBaselineY = boxY + boxH / 2 + 2;
                     ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
@@ -447,42 +329,12 @@
                     ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillText(typeTxt, detailX, textBaselineY); ctx.restore();
 
                     if (personalRating > 0) {
-                        const starOuter = 16;
-                        const starInner = 7.5;
-                        const starGap = 12;
-                        const starWidth = starOuter * 2;
-                        const totalStarsWidth = (5 * starWidth) + (4 * starGap);
+                        const starOuter = 16, starInner = 7.5, starGap = 12, starWidth = starOuter * 2, totalStarsWidth = (5 * starWidth) + (4 * starGap);
                         let startX = (canvas.width - totalStarsWidth) / 2 + starOuter;
                         const starY = boxY + boxH + 45;
-
-                        const drawStarPath = (cx, cy, spikes, outerRadius, innerRadius) => {
-                            let rot = Math.PI / 2 * 3;
-                            let x = cx;
-                            let y = cy;
-                            let step = Math.PI / spikes;
-
-                            ctx.beginPath();
-                            ctx.moveTo(cx, cy - outerRadius);
-                            for (let i = 0; i < spikes; i++) {
-                                x = cx + Math.cos(rot) * outerRadius;
-                                y = cy + Math.sin(rot) * outerRadius;
-                                ctx.lineTo(x, y);
-                                rot += step;
-
-                                x = cx + Math.cos(rot) * innerRadius;
-                                y = cy + Math.sin(rot) * innerRadius;
-                                ctx.lineTo(x, y);
-                                rot += step;
-                            }
-                            ctx.lineTo(cx, cy - outerRadius);
-                            ctx.closePath();
-                            ctx.fill();
-                        };
-
                         for (let i = 1; i <= 5; i++) {
                             ctx.fillStyle = i <= personalRating ? '#facc15' : 'rgba(255, 255, 255, 0.25)';
-                            drawStarPath(startX, starY, 5, starOuter, starInner);
-                            startX += starWidth + starGap;
+                            drawStarPath(ctx, startX, starY, 5, starOuter, starInner); startX += starWidth + starGap;
                         }
                     }
 
@@ -491,13 +343,33 @@
                     if (attrImg.complete) {
                         const aWidth = 280, aHeight = (attrImg.height / attrImg.width) * aWidth;
                         ctx.save(); ctx.globalAlpha = 0.2;
-                        ctx.drawImage(attrImg, (canvas.width - aWidth) / 2, 1780 - (aHeight / 2), aWidth, aHeight);
-                        ctx.restore();
+                        ctx.drawImage(attrImg, (canvas.width - aWidth) / 2, 1780 - (aHeight / 2), aWidth, aHeight); ctx.restore();
                     }
 
                     const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.95));
                     setGenerating(false); return blob;
                 } catch (e) { console.error(e); setGenerating(false); }
+            };
+
+            const drawStarPath = (ctx, cx, cy, spikes, outerRadius, innerRadius) => {
+                let rot = Math.PI / 2 * 3, x = cx, y = cy, step = Math.PI / spikes;
+                ctx.beginPath(); ctx.moveTo(cx, cy - outerRadius);
+                for (let i = 0; i < spikes; i++) {
+                    x = cx + Math.cos(rot) * outerRadius; y = cy + Math.sin(rot) * outerRadius; ctx.lineTo(x, y); rot += step;
+                    x = cx + Math.cos(rot) * innerRadius; y = cy + Math.sin(rot) * innerRadius; ctx.lineTo(x, y); rot += step;
+                }
+                ctx.lineTo(cx, cy - outerRadius); ctx.closePath(); ctx.fill();
+            };
+
+            const getBalancedLines = (ctx, text, maxWidth) => {
+                const words = text.split(' '), lines = []; let line = '';
+                for (let n = 0; n < words.length; n++) {
+                    let test = line + words[n] + ' ';
+                    if (ctx.measureText(test).width > maxWidth && n > 0) { lines.push(line.trim()); line = words[n] + ' '; }
+                    else { line = test; }
+                }
+                lines.push(line.trim());
+                return lines.slice(0, 2);
             };
 
             const handleShare = async (item) => {
@@ -519,7 +391,7 @@
 
             const PosterItem = ({ item }) => (
                 <div onClick={() => setSelectedItem(item)} className="group relative aspect-[2/3] bg-neutral-900 rounded-2xl overflow-hidden cursor-pointer border border-white/5 hover:border-white/20 transition-all transform active:scale-95">
-                    <img src={`${TMDB_IMAGE_BASE}${item.poster_path}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" alt={item.title || item.name} />
+                    <img src={`${TMDB_IMAGE_BASE}${item.poster_path}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
                     <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-black border border-white/10 uppercase z-10">
                         {item.media_type === 'tv' ? <div className="flex items-center gap-1"><Icon name="tv" size={10} /> TV</div> : <div className="flex items-center gap-1"><Icon name="film" size={10} /> MOVIE</div>}
                     </div>
@@ -531,26 +403,16 @@
             );
 
             const isTvSelected = selectedItem && (selectedItem.media_type === 'tv' || !selectedItem.title);
-            
+            const airedSeasons = (tvDetails.seasons || []).filter(s => s.season_number > 0 && s.air_date && s.air_date <= today);
             const availablePosters = [];
-            const validSeasons = tvDetails.seasons ? tvDetails.seasons.filter(s => s.season_number > 0) : [];
-            
-            if (selectedItem && selectedItem.poster_path) {
-                availablePosters.push({ id: 'main', path: selectedItem.poster_path, label: 'Main Poster' });
-            }
-
-            if (isTvSelected && validSeasons.length > 1) {
-                validSeasons.forEach(s => {
+            if (selectedItem?.poster_path) availablePosters.push({ id: 'main', path: selectedItem.poster_path, label: 'Main Poster' });
+            if (isTvSelected && airedSeasons.length > 1) {
+                airedSeasons.forEach(s => {
                     if (s.poster_path && !availablePosters.find(p => p.path === s.poster_path)) {
-                        availablePosters.push({ 
-                            id: `s${s.season_number}`, 
-                            path: s.poster_path, 
-                            label: `Season ${s.season_number}` 
-                        });
+                        availablePosters.push({ id: `s${s.season_number}`, path: s.poster_path, label: `Season ${s.season_number}` });
                     }
                 });
             }
-
             const activePoster = customPoster || selectedItem?.poster_path || '';
             const canChangePoster = isTvSelected && availablePosters.length > 1;
 
@@ -562,24 +424,52 @@
                         </div>
                         <div className="flex items-center gap-2">
                             <a href="https://saweria.co/mchammadr" target="_blank" className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-yellow-600/10 hover:bg-yellow-600/20 text-yellow-500 rounded-full border border-yellow-500/20 transition-all text-[10px] sm:text-xs font-bold">
-                                <Icon name="heart" size={14} className="fill-yellow-500" />
-                                <span>Saweria</span>
+                                <Icon name="heart" size={14} className="fill-yellow-500" /> <span>Saweria</span>
                             </a>
                             <a href="https://ko-fi.com/mchammadr_" target="_blank" className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-pink-600/10 hover:bg-pink-600/20 text-pink-400 rounded-full border border-pink-500/20 transition-all text-[10px] sm:text-xs font-bold">
-                                <Icon name="heart" size={14} className="fill-pink-400" />
-                                <span>Ko-fi</span>
+                                <Icon name="heart" size={14} className="fill-pink-400" /> <span>Ko-fi</span>
                             </a>
                         </div>
                     </header>
 
                     <main className="max-w-4xl mx-auto p-6 flex-grow w-full pb-12">
-                        <form onSubmit={searchAll} className="relative mb-12 mt-2">
-                            <input type="text" placeholder="Search movies or tv series..." value={query} onChange={(e) => { setQuery(e.target.value); setHasSearched(false); }} className="w-full bg-neutral-900/50 border border-white/10 rounded-3xl py-5 pl-14 pr-6 focus:ring-2 focus:ring-white outline-none text-lg transition-all shadow-2xl font-inter" />
-                            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-400"><Icon name="search" size={22} /></div>
-                        </form>
+                        <div className="relative mb-12 mt-2" ref={suggestionRef}>
+                            <form onSubmit={searchAll}>
+                                <input 
+                                    type="text" 
+                                    placeholder="Search movies or tv series..." 
+                                    value={query} 
+                                    onChange={(e) => setQuery(e.target.value)} 
+                                    className="w-full bg-neutral-900/50 border border-white/10 rounded-3xl py-5 pl-14 pr-6 focus:ring-2 focus:ring-white outline-none text-lg transition-all shadow-2xl font-inter" 
+                                />
+                                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-400"><Icon name="search" size={22} /></div>
+                            </form>
+
+                            {showSuggestions && (
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-neutral-900/95 backdrop-blur-3xl border border-white/10 rounded-3xl overflow-hidden z-40 shadow-2xl animate-slide-up">
+                                    {suggestions.map(item => (
+                                        <div 
+                                            key={item.id} 
+                                            onClick={() => { setSelectedItem(item); setShowSuggestions(false); }}
+                                            className="px-6 py-3.5 hover:bg-white/5 cursor-pointer flex flex-row items-center gap-2 border-b border-white/5 last:border-0 overflow-hidden"
+                                        >
+                                            <span className="text-sm font-semibold font-inter tracking-tight truncate flex-1 uppercase">
+                                                {item.title || item.name}
+                                            </span>
+                                            <span className="text-[10px] text-neutral-400 font-inter shrink-0 uppercase tracking-tighter">
+                                                {(item.release_date || item.first_air_date || 'N/A').split('-')[0]} • {item.media_type}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
 
                         {loading ? (
-                            <div className="flex flex-col items-center justify-center py-24 gap-4"><div className="w-12 h-12 border-2 border-white border-t-transparent rounded-full animate-spin"></div><p className="text-neutral-500 text-sm font-medium uppercase tracking-widest font-inter">Fetching data...</p></div>
+                            <div className="flex flex-col items-center justify-center py-24 gap-4">
+                                <div className="w-12 h-12 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                <p className="text-neutral-500 text-sm font-medium uppercase tracking-widest font-inter">Fetching data...</p>
+                            </div>
                         ) : (
                             <div className="space-y-16 pb-12">
                                 {movies.length > 0 && (
@@ -616,17 +506,6 @@
                         )}
                     </main>
 
-                    <footer className="w-full py-8 border-t border-white/5 flex flex-col items-center gap-4 mt-auto bg-black">
-                        <img src="attribution.png" className="h-5 w-auto opacity-50 grayscale hover:opacity-100 hover:grayscale-0 transition-all" alt="TMDB Attribution" />
-                        <div className="bg-neutral-900/50 border border-white/10 rounded-xl px-4 py-2.5 max-w-[90%] mx-auto">
-                            <p className="text-[9px] text-neutral-500 font-medium text-center uppercase tracking-tight leading-relaxed">
-                                This product uses the TMDB API<br />
-                                but is not endorsed or certified by TMDB.
-                            </p>
-                        </div>
-                    </footer>
-
-                    {/* Details/Preview Modal */}
                     {selectedItem && (
                         <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-lg flex flex-col items-center justify-start p-4 overflow-y-auto">
                             <div className="absolute top-6 inset-x-6 flex justify-between items-center z-50">
@@ -637,36 +516,30 @@
                             <div className="w-full max-sm flex flex-col gap-6 pt-16 pb-12 animate-slide-up scale-[0.9] sm:scale-100 origin-top">
                                 <div className="relative aspect-[9/16] w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-neutral-950" style={{ backgroundColor: bgColor }}>
                                     <div className="absolute inset-0 transition-opacity" style={{ opacity: 0.45 }}>
-                                        <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/t/p/w1280${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${activePoster}`} className="absolute inset-0 w-full h-full object-cover scale-[1.25] blur-[12px]" alt="" />
+                                        <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/t/p/w1280${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${activePoster}`} className="absolute inset-0 w-full h-full object-cover scale-[1.25] blur-[12px]" />
                                     </div>
                                     <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, rgba(${hexToRgb(bgColor)}, ${bgOpacity * 0.1}), rgba(${hexToRgb(bgColor)}, ${bgOpacity}))` }}></div>
                                     
                                     <div className="absolute inset-0 flex flex-col items-center">
                                         <div className="w-[59.25%] aspect-[2/3] mt-[10.41%] shrink-0 relative">
                                             <div className="w-full h-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-                                                <img src={`${TMDB_IMAGE_BASE}${activePoster}`} className="w-full h-full object-cover transition-all" alt="Poster Preview" />
+                                                <img src={`${TMDB_IMAGE_BASE}${activePoster}`} className="w-full h-full object-cover transition-all" />
                                             </div>
-                                            
                                             {canChangePoster && (
                                                 <div className="absolute top-6 right-0 translate-x-1/2 z-30 flex flex-col items-end">
                                                     <button 
                                                         onClick={() => setShowPosterPicker(!showPosterPicker)}
-                                                        className={`w-9 h-9 rounded-full grid place-items-center transition-all shadow-xl border ${showPosterPicker ? 'bg-yellow-400 border-yellow-300 text-black scale-105' : 'text-white bg-black/60 backdrop-blur-md border-white/20 hover:bg-black/80 hover:scale-105 active:scale-95'}`}
-                                                        title="Choose Poster"
+                                                        className={`w-9 h-9 rounded-full grid place-items-center transition-all shadow-xl border ${showPosterPicker ? 'bg-yellow-400 border-yellow-300 text-black scale-105' : 'text-white bg-black/60 backdrop-blur-md border-white/20 hover:bg-black/80'}`}
                                                     >
                                                         <Icon name="settings" size={18} className="shrink-0 transform translate-y-[0.5px] translate-x-[0.5px]" />
                                                     </button>
-
                                                     {showPosterPicker && (
                                                         <div className="absolute top-12 right-0 w-28 sm:w-32 bg-neutral-900/95 backdrop-blur-xl border border-white/15 rounded-2xl p-2.5 shadow-2xl animate-slide-up flex flex-col origin-top-right">
-                                                            <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10 shrink-0">
-                                                                <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 w-full text-center">Posters</span>
-                                                            </div>
-                                                            <div className="flex flex-col gap-2.5 overflow-y-auto overscroll-contain max-h-[220px] sm:max-h-[260px] pr-1 hide-scroll">
+                                                            <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[220px] hide-scroll">
                                                                 {availablePosters.map(p => (
-                                                                    <div key={p.id} onClick={() => { setCustomPoster(p.path); setShowPosterPicker(false); }} className={`relative w-full aspect-[2/3] rounded-xl overflow-hidden cursor-pointer transition-all shrink-0 ${activePoster === p.path ? 'border-[3px] border-yellow-400 scale-[0.98]' : 'border-2 border-transparent opacity-50 hover:opacity-100 hover:scale-[0.98]'}`}>
+                                                                    <div key={p.id} onClick={() => { setCustomPoster(p.path); setShowPosterPicker(false); }} className={`relative w-full aspect-[2/3] rounded-xl overflow-hidden cursor-pointer transition-all ${activePoster === p.path ? 'border-[3px] border-yellow-400' : 'opacity-50 hover:opacity-100'}`}>
                                                                         <img src={`${TMDB_IMAGE_BASE}${p.path}`} className="w-full h-full object-cover" />
-                                                                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/80 to-transparent pt-8 pb-1.5 px-1 text-[8px] text-center font-bold text-white uppercase tracking-widest leading-tight">{p.label}</div>
+                                                                        <div className="absolute bottom-0 inset-x-0 bg-black/80 py-1 text-[8px] text-center font-bold text-white uppercase tracking-widest leading-tight">{p.label}</div>
                                                                     </div>
                                                                 ))}
                                                             </div>
@@ -677,183 +550,91 @@
                                         </div>
                                         
                                         <div className="text-center w-full px-8 mt-[7%] flex flex-col items-center justify-center">
-                                            <h3 className={`text-[1.5rem] font-light leading-tight uppercase text-white font-oswald drop-shadow-md text-center max-w-[90%] transition-all ${isTvSelected && showSeasonEpisode ? 'mb-[1.5%]' : 'mb-[4.5%]'}`} style={{ textWrap: 'balance' }}>
-                                                {(selectedItem.title || selectedItem.name)}
-                                            </h3>
-
+                                            {/* Changed to font-normal for Regular feel on story canvas */}
+                                            <h3 className="text-2xl font-normal leading-tight uppercase text-white font-oswald drop-shadow-md text-center max-w-[90%] mb-2">{(selectedItem.title || selectedItem.name)}</h3>
                                             {isTvSelected && showSeasonEpisode && (
-                                                <p className="text-[0.65rem] font-medium text-white/50 font-inter mb-[3.5%] tracking-widest uppercase">
-                                                    S{season.toString().padStart(2, '0')}{episode === 'none' ? "" : ` E${episode.toString().padStart(2, '0')}`}
-                                                </p>
+                                                <p className="text-[0.65rem] font-medium text-white/50 font-inter mb-4 tracking-widest uppercase">S{season.toString().padStart(2, '0')}{episode === 'none' ? "" : ` E${episode.toString().padStart(2, '0')}`}</p>
                                             )}
-                                            
-                                            <div className="inline-flex items-center justify-center bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-full font-inter border border-white/15 shadow-sm">
-                                                <div className="flex items-center gap-2.5 sm:gap-3">
-                                                    <span className="text-white text-[10px] sm:text-[11px] font-medium tracking-tight whitespace-nowrap">{(selectedItem.release_date || selectedItem.first_air_date || '').split('-')[0]}</span>
-                                                    <span className="w-1 h-1 bg-white/40 rounded-full shrink-0"></span>
-                                                    <span className="text-yellow-400 text-[10px] sm:text-[11px] font-bold tracking-tight whitespace-nowrap">★ {selectedItem.vote_average?.toFixed(1) || '0.0'}</span>
-                                                    <span className="w-1 h-1 bg-white/40 rounded-full shrink-0"></span>
-                                                    <span className="text-white/60 text-[10px] sm:text-[11px] font-medium uppercase tracking-tight whitespace-nowrap">{isTvSelected ? 'SERIES' : 'MOVIE'}</span>
+                                            <div className="inline-flex items-center justify-center bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-full font-inter border border-white/15">
+                                                <div className="flex items-center gap-2.5 sm:gap-3 text-[10px] sm:text-[11px] font-medium">
+                                                    <span>{(selectedItem.release_date || selectedItem.first_air_date || '').split('-')[0]}</span>
+                                                    <span className="w-1 h-1 bg-white/40 rounded-full"></span>
+                                                    <span className="text-yellow-400 font-bold">★ {selectedItem.vote_average?.toFixed(1) || '0.0'}</span>
+                                                    <span className="w-1 h-1 bg-white/40 rounded-full"></span>
+                                                    <span className="text-white/60 uppercase tracking-tight">{isTvSelected ? 'SERIES' : 'MOVIE'}</span>
                                                 </div>
                                             </div>
-
                                             {personalRating > 0 && (
                                                 <div className="flex items-center gap-1.5 mt-3.5 animate-slide-up">
-                                                    {[1, 2, 3, 4, 5].map(star => (
-                                                        <Icon 
-                                                            key={star} 
-                                                            name="star" 
-                                                            size={13} 
-                                                            className={star <= personalRating ? "text-yellow-400 fill-yellow-400 drop-shadow-md" : "text-white/30 fill-white/30"} 
-                                                        />
-                                                    ))}
+                                                    {[1, 2, 3, 4, 5].map(star => <Icon key={star} name="star" size={13} className={star <= personalRating ? "text-yellow-400 fill-yellow-400" : "text-white/30 fill-white/30"} />)}
                                                 </div>
                                             )}
-                                        </div>
-
-                                        <div className="absolute bottom-[7%] w-full flex flex-col items-center opacity-70">
-                                            <img src="render.png" className="h-4 w-auto object-contain px-8" alt="render-footer" style={{ opacity: 0.2 }} />
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="flex flex-col gap-3 w-full">
                                     {isTvSelected && (
-                                        <div className="flex flex-col gap-3 bg-white/5 backdrop-blur-xl px-6 py-4 rounded-[2rem] border border-white/10 shadow-xl w-full">
+                                        <div className="flex flex-col gap-3 bg-white/5 backdrop-blur-xl px-6 py-4 rounded-[2rem] border border-white/10 shadow-xl">
                                             <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <Icon name="tv" size={16} className="text-neutral-400" />
-                                                    <span className="text-xs font-bold text-neutral-300 uppercase font-inter tracking-wide">TV Details</span>
-                                                </div>
+                                                <div className="flex items-center gap-2"><Icon name="tv" size={16} className="text-neutral-400" /><span className="text-xs font-bold text-neutral-300 uppercase tracking-wide">TV Details</span></div>
                                                 <label className="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" className="sr-only peer" checked={showSeasonEpisode} onChange={() => setShowSeasonEpisode(!showSeasonEpisode)} />
-                                                    <div className="w-11 h-6 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-black after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400 peer-checked:after:bg-black"></div>
+                                                    <div className="w-11 h-6 bg-neutral-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400 peer-checked:after:bg-black"></div>
                                                 </label>
                                             </div>
-                                            
                                             {showSeasonEpisode && (
                                                 <div className="flex items-center gap-3 animate-slide-up">
-                                                    <div className="flex flex-col gap-1 flex-1">
-                                                        <span className="text-[8px] font-bold text-neutral-500 uppercase font-inter">Season</span>
-                                                        <select 
-                                                            value={season} 
-                                                            onChange={(e) => setSeason(parseInt(e.target.value))}
-                                                            className="w-full bg-white/10 border border-white/10 rounded-xl py-2 px-3 text-center font-bold text-sm outline-none font-inter text-white"
-                                                        >
-                                                            {tvDetails.seasons && tvDetails.seasons.filter(s => s.season_number > 0).map(s => (
-                                                                <option key={s.id} value={s.season_number} className="bg-neutral-900 text-white">S{s.season_number.toString().padStart(2, '0')}</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                    <div className="flex flex-col gap-1 flex-1">
-                                                        <span className="text-[8px] font-bold text-neutral-500 uppercase font-inter">Episode</span>
-                                                        <select 
-                                                            value={episode} 
-                                                            onFocus={() => setIsEpDropdownOpen(true)}
-                                                            onBlur={() => {
-                                                                // Slight delay to ensure change event processes first
-                                                                setTimeout(() => setIsEpDropdownOpen(false), 100);
-                                                            }}
-                                                            onChange={(e) => {
-                                                                const val = e.target.value;
-                                                                setEpisode(val === 'none' ? 'none' : parseInt(val));
-                                                                setIsEpDropdownOpen(false); // Close state explicitly on change
-                                                                e.target.blur(); // auto-close visual helper
-                                                            }}
-                                                            className="w-full bg-white/10 border border-white/10 rounded-xl py-2 px-3 text-center font-bold text-sm outline-none font-inter text-white"
-                                                        >
-                                                            <option value="none" className="bg-neutral-900 text-white italic">
-                                                                {(isEpDropdownOpen || episode !== 'none') ? "Do Not Show Episode" : "None"}
-                                                            </option>
-                                                            {Array.from({ length: availableEpisodes }, (_, i) => i + 1).map(num => (
-                                                                <option key={num} value={num} className="bg-neutral-900 text-white">E{num.toString().padStart(2, '0')}</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
+                                                    <select value={season} onChange={(e) => setSeason(parseInt(e.target.value))} className="flex-1 bg-white/10 border border-white/10 rounded-xl py-2 px-3 text-center font-bold text-sm text-white">
+                                                        {airedSeasons.map(s => <option key={s.id} value={s.season_number} className="bg-neutral-900">S{s.season_number.toString().padStart(2, '0')}</option>)}
+                                                    </select>
+                                                    <select 
+                                                        value={episode} 
+                                                        onFocus={() => setIsEpDropdownOpen(true)}
+                                                        onBlur={() => setTimeout(() => setIsEpDropdownOpen(false), 100)}
+                                                        onChange={(e) => setEpisode(e.target.value === 'none' ? 'none' : parseInt(e.target.value))}
+                                                        className="flex-1 bg-white/10 border border-white/10 rounded-xl py-2 px-3 text-center font-bold text-sm text-white"
+                                                    >
+                                                        <option value="none" className="bg-neutral-900 italic">{(isEpDropdownOpen || episode !== 'none') ? "Do Not Show Episode" : "None"}</option>
+                                                        {Array.from({ length: availableEpisodes }, (_, i) => i + 1).map(num => <option key={num} value={num} className="bg-neutral-900">E{num.toString().padStart(2, '0')}</option>)}
+                                                    </select>
                                                 </div>
                                             )}
                                         </div>
                                     )}
 
-                                    <div className="flex items-center justify-between bg-white/5 backdrop-blur-xl px-5 sm:px-6 py-4 rounded-[2rem] border border-white/10 shadow-xl w-full">
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            <Icon name="star" size={16} className="text-neutral-400" />
-                                            <span className="text-[11px] sm:text-xs font-bold text-neutral-300 uppercase font-inter tracking-wide whitespace-nowrap">Your Rating</span>
-                                        </div>
-                                        
+                                    <div className="flex items-center justify-between bg-white/5 backdrop-blur-xl px-5 sm:px-6 py-4 rounded-[2rem] border border-white/10">
+                                        <div className="flex items-center gap-2 shrink-0"><Icon name="star" size={16} className="text-neutral-400" /><span className="text-[11px] sm:text-xs font-bold text-neutral-300 uppercase tracking-wide">Your Rating</span></div>
                                         <div className="flex items-center gap-1 sm:gap-2">
                                             {[1, 2, 3, 4, 5].map(star => (
-                                                <button 
-                                                    key={star} 
-                                                    onClick={() => setPersonalRating(star === personalRating ? 0 : star)}
-                                                    className="hover:scale-110 active:scale-95 transition-transform"
-                                                >
-                                                    <Icon 
-                                                        name="star" 
-                                                        size={26} 
-                                                        className={`transition-colors ${star <= personalRating ? "text-yellow-400 fill-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]" : "text-white/20 fill-white/5"}`} 
-                                                    />
+                                                <button key={star} onClick={() => setPersonalRating(star === personalRating ? 0 : star)} className="hover:scale-110 active:scale-95 transition-transform">
+                                                    <Icon name="star" size={26} className={star <= personalRating ? "text-yellow-400 fill-yellow-400" : "text-white/20 fill-white/5"} />
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between bg-white/5 backdrop-blur-xl px-6 py-4 rounded-[2rem] border border-white/10 shadow-xl w-full">
+                                    <div className="flex items-center justify-between bg-white/5 backdrop-blur-xl px-6 py-4 rounded-[2rem] border border-white/10">
                                         <div className="flex items-center gap-3">
                                             <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white shrink-0 shadow-lg">
                                                 <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="absolute -top-2 -left-2 w-12 h-12 cursor-pointer" />
                                             </div>
-                                            <span className="text-xs font-bold text-neutral-300 tracking-wider uppercase font-inter">Color</span>
+                                            <span className="text-xs font-bold text-neutral-300 uppercase">Color</span>
                                         </div>
                                         <div className="w-[1px] h-6 bg-white/20"></div>
                                         <div className="flex items-center gap-3">
-                                            <span className="text-xs font-bold text-neutral-300 uppercase font-inter">Opacity</span>
+                                            <span className="text-xs font-bold text-neutral-300 uppercase">Opacity</span>
                                             <input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-20 md:w-28 accent-white cursor-pointer" />
                                         </div>
                                     </div>
 
-                                    <button onClick={() => handleShare(selectedItem)} disabled={generating} className="relative w-full py-5 bg-white text-black rounded-[2rem] font-bold text-xl active:scale-95 transition-all shadow-2xl uppercase flex items-center justify-center gap-3 overflow-hidden font-inter tracking-wider">
-                                        {generating ? (
-                                            <div className="w-6 h-6 border-4 border-black/20 border-t-black rounded-full animate-spin"></div>
-                                        ) : (
-                                            <>
-                                                <Icon name="share" size={24} />
-                                                <span>Share to Story</span>
-                                            </>
-                                        )}
+                                    <button onClick={() => handleShare(selectedItem)} disabled={generating} className="w-full py-5 bg-white text-black rounded-[2rem] font-bold text-xl active:scale-95 transition-all shadow-2xl uppercase flex items-center justify-center gap-3 font-inter tracking-wider">
+                                        {generating ? <div className="w-6 h-6 border-4 border-black/20 border-t-black rounded-full animate-spin"></div> : <><Icon name="share" size={24} /><span>Share to Story</span></>}
                                     </button>
                                 </div>
                             </div>
                         </div>
                     )}
-                    
-                    {canInstall && !selectedItem && !hasEverSearched && query.trim() === '' && (
-                        <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
-                            <button 
-                                onClick={async () => { 
-                                    const isIOSUser = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
-                                    if (isIOSUser) {
-                                        setShowIosModal(true);
-                                    } else if (window.deferredPrompt) {
-                                        window.deferredPrompt.prompt(); 
-                                        const { outcome } = await window.deferredPrompt.userChoice; 
-                                        if (outcome === 'accepted') {
-                                            setCanInstall(false);
-                                        }
-                                        window.deferredPrompt = null;
-                                    } else {
-                                        alert("To install, please open your browser menu (⋮) and select 'Add to Home screen' or 'Install App'.");
-                                    }
-                                }} 
-                                className="pointer-events-auto flex items-center justify-center gap-3 bg-white text-black px-8 py-5 rounded-full shadow-[0_0_50px_rgba(255,255,255,0.4)] hover:scale-105 active:scale-95 transition-all animate-bounce-subtle border border-white/20"
-                                title="Add to Homescreen"
-                            >
-                                <Icon name="download" size={24} />
-                                <span className="text-xs sm:text-sm font-bold whitespace-nowrap uppercase tracking-widest">Add to Homescreen</span>
-                            </button>
-                        </div>
-                    )}
-                    
                     <canvas ref={canvasRef} className="hidden"></canvas>
                 </div>
             );
