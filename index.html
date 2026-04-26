@@ -125,6 +125,7 @@
             const [series, setSeries] = useState([]);
             const [suggestions, setSuggestions] = useState([]);
             const [showSuggestions, setShowSuggestions] = useState(false);
+            const [isFocused, setIsFocused] = useState(false);
             const [selectedItem, setSelectedItem] = useState(null);
             const [loading, setLoading] = useState(false);
             const [error, setError] = useState(null);
@@ -152,8 +153,8 @@
             const inputRef = useRef(null);
 
             useEffect(() => {
-                // Jangan jalankan timer saran jika sedang dalam proses loading atau sudah berhasil cari
-                if (loading) {
+                // Jangan jalankan timer saran jika sedang loading atau input tidak fokus
+                if (loading || !isFocused) {
                     setShowSuggestions(false);
                     return;
                 }
@@ -167,7 +168,7 @@
                     }
                 }, 300);
                 return () => clearTimeout(timer);
-            }, [query, loading]);
+            }, [query, loading, isFocused]);
 
             useEffect(() => {
                 const handleClickOutside = (e) => {
@@ -191,8 +192,8 @@
                         })
                         .slice(0, 8); 
                     
-                    // Pastikan tidak memunculkan saran jika user keburu menekan enter (loading = true)
-                    if (!loading) {
+                    // Verifikasi ulang sebelum menampilkan
+                    if (!loading && isFocused) {
                         setSuggestions(filtered);
                         setShowSuggestions(filtered.length > 0);
                     }
@@ -230,9 +231,11 @@
                 if (e) e.preventDefault();
                 if (!query || !apiKey) return;
                 
-                // FORCE HIDE SUGGESTIONS & HIDE KEYBOARD
+                // FORCE HIDE & BLUR
                 setShowSuggestions(false);
                 setSuggestions([]);
+                setIsFocused(false); // Pastikan state fokus mati
+                
                 if (inputRef.current) {
                     inputRef.current.blur(); // Menyembunyikan keyboard secara paksa
                 }
@@ -312,7 +315,6 @@
 
                     ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
                     const titleStr = (item.title || item.name).toUpperCase();
-                    // Keep 400 for Regular weight on story canvas
                     ctx.font = '400 70px Oswald, sans-serif';
                     const lines = getBalancedLines(ctx, titleStr, 750);
                     let currentY = 1295; 
@@ -458,6 +460,11 @@
                                     type="text" 
                                     placeholder="Search movies or tv series..." 
                                     value={query} 
+                                    onFocus={() => setIsFocused(true)}
+                                    onBlur={() => {
+                                        // Delay sedikit agar klik pada suggestion sempat diproses sebelum focus hilang
+                                        setTimeout(() => setIsFocused(false), 200);
+                                    }}
                                     onChange={(e) => setQuery(e.target.value)} 
                                     className="w-full bg-neutral-900/50 border border-white/10 rounded-3xl py-5 pl-14 pr-6 focus:ring-2 focus:ring-white outline-none text-lg transition-all shadow-2xl font-inter" 
                                 />
@@ -469,7 +476,12 @@
                                     {suggestions.map(item => (
                                         <div 
                                             key={item.id} 
-                                            onClick={() => { setSelectedItem(item); setShowSuggestions(false); }}
+                                            onClick={() => { 
+                                                setSelectedItem(item); 
+                                                setShowSuggestions(false); 
+                                                setIsFocused(false);
+                                                if (inputRef.current) inputRef.current.blur();
+                                            }}
                                             className="px-6 py-3.5 hover:bg-white/5 cursor-pointer flex flex-row items-center gap-2 border-b border-white/5 last:border-0 overflow-hidden"
                                         >
                                             <span className="text-sm font-semibold font-inter tracking-tight truncate flex-1 uppercase">
