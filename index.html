@@ -327,7 +327,6 @@
                 if (outcome === 'accepted') setInstallPrompt(null);
             };
 
-            // NEW: Logic to Truncate title based on 2-line limit
             const getSmartTitle = (ctx, text, maxWidth) => {
                 const upperTitle = text.toUpperCase();
                 const fontSize = 70;
@@ -336,14 +335,11 @@
                 let lines = getBalancedLines(ctx, upperTitle, maxWidth);
                 
                 if (lines.length > 2) {
-                    // Rule: If > 2 lines and has : or , -> Take first part
                     if (upperTitle.includes(':') || upperTitle.includes(',')) {
                         const firstPart = upperTitle.split(/[:|,]/)[0].trim();
                         return getBalancedLines(ctx, firstPart, maxWidth).slice(0, 2);
                     } else {
-                        // Rule: If > 2 lines and NO punctuation -> Take first 2 lines and add ellipsis
                         const firstTwo = lines.slice(0, 2);
-                        // Truncate second line to fit "..."
                         let lastLine = firstTwo[1];
                         while (ctx.measureText(lastLine + "...").width > maxWidth && lastLine.length > 0) {
                             lastLine = lastLine.slice(0, -1);
@@ -400,14 +396,12 @@
 
                     ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
                     
-                    // UPDATED: Fixed 70px font and 2-line smart truncation
                     const fontSize = 70;
                     ctx.font = `400 ${fontSize}px Oswald, sans-serif`;
                     const lines = getSmartTitle(ctx, (item.title || item.name), 750);
                     
                     const lineHeight = fontSize + 12;
                     const totalHeight = lines.length * lineHeight;
-                    // Keep 1355 to maintain the gap as requested
                     let currentY = 1355 - (totalHeight / 2); 
                     
                     ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 15; ctx.shadowOffsetY = 5;
@@ -536,7 +530,6 @@
                 ? `https://image.tmdb.org/t/p/w1280${selectedItem.backdrop_path}` 
                 : `${TMDB_IMAGE_BASE}${activePoster}`;
 
-            // Helper to get processed lines for Preview UI
             const getPreviewLines = () => {
                 if (!selectedItem) return [];
                 const tempCanvas = document.createElement('canvas');
@@ -545,7 +538,6 @@
             };
 
             const previewLines = getPreviewLines();
-            // Match exactly with Render: fontSize 70 on 1080px width = 6.48cqw
             const previewTitleFontSize = '6.48cqw'; 
 
             return (
@@ -735,23 +727,26 @@
                                             )}
                                         </div>
                                         
-                                        {/* PREVIEW UI MATCHING RENDER */}
-                                        <div className="absolute top-[70.57%] w-full flex flex-col items-center">
-                                            <div className="flex flex-col items-center text-center max-w-[85%]">
+                                        {/* PREVIEW UI MATCHING RENDER - REFINED GAPS */}
+                                        <div className="absolute top-[68.5%] w-full flex flex-col items-center">
+                                            {/* Container Title yang Ter-pusat */}
+                                            <div className="flex flex-col items-center text-center max-w-[85%] -translate-y-1/2">
                                                 {previewLines.map((line, idx) => (
                                                     <h3 key={idx} className="font-normal uppercase text-white font-oswald drop-shadow-md leading-tight" style={{ fontSize: previewTitleFontSize }}>
                                                         {line}
                                                     </h3>
                                                 ))}
-                                            </div>
-                                            
-                                            <div className="flex flex-col items-center w-full mt-[1.82cqh]">
+                                                
+                                                {/* TV Detail dipindahkan ke sini: Pas di bawah Title */}
                                                 {isTvSelected && showSeasonEpisode && (
-                                                    <p className="font-medium text-white/50 font-inter tracking-[0.2em] uppercase mb-[1%]" style={{ fontSize: '2.22cqw' }}>
+                                                    <p className="font-medium text-white/50 font-inter tracking-[0.2em] uppercase mt-[1.5cqw]" style={{ fontSize: '2.22cqw' }}>
                                                         S{season.toString().padStart(2, '0')}{episode === 'none' ? "" : ` E${episode.toString().padStart(2, '0')}`}
                                                     </p>
                                                 )}
-                                                
+                                            </div>
+                                            
+                                            {/* Metabox dengan jarak yang lebih besar dari Title/TV Details */}
+                                            <div className="flex flex-col items-center w-full mt-[1cqh]">
                                                 <div className="inline-flex items-center justify-center bg-white/10 backdrop-blur-md rounded-full font-inter border border-white/15 px-[4%] py-[1.8%]" style={{ height: '3.75cqh' }}>
                                                     <div className="flex items-center gap-3 font-medium whitespace-nowrap" style={{ fontSize: '3.14cqw' }}>
                                                         <span>{(selectedItem.release_date || selectedItem.first_air_date || '').split('-')[0]}</span>
@@ -763,14 +758,12 @@
                                                 </div>
 
                                                 {personalRating > 0 && (
-                                                    <div className="flex items-center gap-2 mt-[4.5%] animate-slide-up">
+                                                    <div className="flex items-center gap-2 mt-[2.5cqh] animate-slide-up">
                                                         {[1, 2, 3, 4, 5].map(star => <Icon key={star} name="star" size={16} className={star <= personalRating ? "text-yellow-400 fill-yellow-400" : "text-white/30 fill-white/30"} />)}
                                                     </div>
                                                 )}
                                             </div>
                                         </div>
-
-                                        {/* LOGO REMOVED FROM PREVIEW ACCORDING TO USER REQUEST */}
                                     </div>
                                 </div>
 
