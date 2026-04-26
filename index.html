@@ -12,7 +12,6 @@
     <link rel="manifest" id="manifest-placeholder">
 
     <script>
-        // Catch the prompt as early as possible
         window.deferredPrompt = null;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
@@ -20,7 +19,6 @@
             window.dispatchEvent(new CustomEvent('pwa-prompt-ready'));
         });
 
-        // Setup Manifest Dynamically
         (() => {
             const manifest = {
                 "name": "WatchShare Story Editor",
@@ -60,7 +58,8 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Oswald:wght@200;300;400;500;700&display=swap');
         
-        body { font-family: 'Inter', sans-serif; background-color: black; color: white; overflow-x: hidden; }
+        body { font-family: 'Inter', sans-serif; background-color: black; color: white; overflow-x: hidden; min-height: 100vh; display: flex; flex-direction: column; }
+        #root { display: flex; flex-direction: column; flex-grow: 1; }
         .font-oswald { font-family: 'Oswald', sans-serif; }
         .font-inter { font-family: 'Inter', sans-serif; }
         
@@ -81,6 +80,19 @@
             background-position: right 0.5rem center;
             background-size: 1.2em;
         }
+
+        .poster-picker-scroll {
+            max-height: 400px;
+            overflow-y: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .poster-picker-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Container Queries fallback to ensure text scales with container width */
+        .story-container { container-type: inline-size; }
     </style>
 </head>
 <body>
@@ -93,7 +105,7 @@
             const icons = {
                 settings: <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2zM12 15a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" />,
                 search: <><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>,
-                heart: <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />,
+                heart: <path d="M19 14c1.46 1.46 3 3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />,
                 x: <path d="M18 6 6 18M6 6l12 12" />,
                 share: <><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></>,
                 tv: <><rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><polyline points="7 2 12 7 17 2"/></>,
@@ -134,8 +146,6 @@
             const [bgOpacity, setBgOpacity] = useState(1);
             const [hasSearched, setHasSearched] = useState(false);
             const [hasEverSearched, setHasEverSearched] = useState(false);
-            const [canInstall, setCanInstall] = useState(false);
-            const [showIosModal, setShowIosModal] = useState(false);
             const [showAllMovies, setShowAllMovies] = useState(false);
             const [showAllSeries, setShowAllSeries] = useState(false);
             const [showSeasonEpisode, setShowSeasonEpisode] = useState(false);
@@ -146,11 +156,12 @@
             const [customPoster, setCustomPoster] = useState(null);
             const [showPosterPicker, setShowPosterPicker] = useState(false);
             const [personalRating, setPersonalRating] = useState(0);
-            const [isEpDropdownOpen, setIsEpDropdownOpen] = useState(false);
 
             const canvasRef = useRef(null);
             const suggestionRef = useRef(null);
             const inputRef = useRef(null);
+
+            const isTvSelected = selectedItem && (selectedItem.media_type === 'tv' || !selectedItem.title);
 
             useEffect(() => {
                 if (loading || !isFocused) {
@@ -179,9 +190,20 @@
                 return () => document.removeEventListener("mousedown", handleClickOutside);
             }, []);
 
+            useEffect(() => {
+                if (selectedItem && isTvSelected) {
+                    fetchTvData(selectedItem.id);
+                }
+            }, [selectedItem]);
+
+            useEffect(() => {
+                if (selectedItem && isTvSelected && season) {
+                    fetchSeasonData(selectedItem.id, season);
+                }
+            }, [selectedItem, season]);
+
             const fetchSuggestions = async (q) => {
                 try {
-                    // Added include_adult=false and explicit !item.adult filter
                     const res = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${apiKey}&query=${encodeURIComponent(q)}&language=en-US&page=1&include_adult=false`);
                     const data = await res.json();
                     const filtered = (data.results || [])
@@ -202,14 +224,15 @@
             const fetchTvData = async (id) => {
                 try {
                     const res = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=${apiKey}&language=en-US`);
-                    const data = await res.json();
-                    setTvDetails(data);
-                    const airedSeasons = (data.seasons || []).filter(s => s.season_number > 0 && s.air_date && s.air_date <= today);
+                    const detailData = await res.json();
+                    setTvDetails(detailData);
+                    
+                    const airedSeasons = (detailData.seasons || []).filter(s => s.season_number > 0);
                     if (airedSeasons.length > 0) {
                         const latest = airedSeasons.reduce((prev, curr) => (prev.season_number > curr.season_number ? prev : curr));
                         setSeason(latest.season_number);
                     } else {
-                        setSeason(data.seasons?.[0]?.season_number || 1);
+                        setSeason(detailData.seasons?.[0]?.season_number || 1);
                     }
                     setEpisode('none');
                 } catch (err) { console.error(err); }
@@ -244,7 +267,6 @@
                 setHasEverSearched(true);
                 
                 try {
-                    // Added include_adult=false and explicit !item.adult filter
                     const [movieRes, tvRes] = await Promise.all([
                         fetch(`https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US&page=1&include_adult=false`),
                         fetch(`https://api.themoviedb.org/3/search/tv?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US&page=1&include_adult=false`)
@@ -270,6 +292,7 @@
                 setCustomPoster(null); setShowPosterPicker(false); setPersonalRating(0);
             };
 
+            // GOLDEN RENDER LOGIC - DO NOT CHANGE
             const generateStoryImage = async (item) => {
                 setGenerating(true);
                 const canvas = canvasRef.current;
@@ -285,7 +308,7 @@
 
                     const bgImg = new Image();
                     bgImg.crossOrigin = "anonymous";
-                    bgImg.src = item.backdrop_path ? `https://image.tmdb.org/p/w1280${item.backdrop_path}?canvas=true` : `${TMDB_IMAGE_BASE}${posterToUse}?canvas=true`;
+                    bgImg.src = item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}?canvas=true` : `${TMDB_IMAGE_BASE}${posterToUse}?canvas=true`;
                     await new Promise(r => { bgImg.onload = r; bgImg.onerror = r; });
                     if (bgImg.complete) {
                         ctx.save(); ctx.globalAlpha = 0.45; ctx.filter = 'blur(25px)';
@@ -421,19 +444,23 @@
                 </div>
             );
 
-            const isTvSelected = selectedItem && (selectedItem.media_type === 'tv' || !selectedItem.title);
-            const airedSeasons = (tvDetails.seasons || []).filter(s => s.season_number > 0 && s.air_date && s.air_date <= today);
             const availablePosters = [];
-            if (selectedItem?.poster_path) availablePosters.push({ id: 'main', path: selectedItem.poster_path, label: 'Main Poster' });
-            if (isTvSelected && airedSeasons.length > 1) {
-                airedSeasons.forEach(s => {
-                    if (s.poster_path && !availablePosters.find(p => p.path === s.poster_path)) {
-                        availablePosters.push({ id: `s${s.season_number}`, path: s.poster_path, label: `Season ${s.season_number}` });
-                    }
-                });
+            if (selectedItem) {
+                if (selectedItem.poster_path) availablePosters.push({ id: 'main', path: selectedItem.poster_path, label: 'Main Poster' });
+                if (isTvSelected && tvDetails.seasons) {
+                    tvDetails.seasons.forEach(s => {
+                        if (s.poster_path && s.season_number > 0 && !availablePosters.find(p => p.path === s.poster_path)) {
+                            availablePosters.push({ id: `s${s.season_number}`, path: s.poster_path, label: `Season ${s.season_number}` });
+                        }
+                    });
+                }
             }
+
             const activePoster = customPoster || selectedItem?.poster_path || '';
-            const canChangePoster = isTvSelected && availablePosters.length > 1;
+            const canChangePoster = availablePosters.length > 1;
+            const backdropUrl = selectedItem?.backdrop_path 
+                ? `https://image.tmdb.org/t/p/w1280${selectedItem.backdrop_path}` 
+                : `${TMDB_IMAGE_BASE}${activePoster}`;
 
             return (
                 <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black flex flex-col font-inter relative">
@@ -460,14 +487,9 @@
                                     placeholder="Search movies or tv series..." 
                                     value={query} 
                                     onFocus={() => setIsFocused(true)}
-                                    onBlur={() => {
-                                        setTimeout(() => setIsFocused(false), 200);
-                                    }}
+                                    onBlur={() => setTimeout(() => setIsFocused(false), 200)}
                                     onChange={(e) => setQuery(e.target.value)} 
                                     autoComplete="off"
-                                    autoCorrect="off"
-                                    autoCapitalize="off"
-                                    spellCheck="false"
                                     className="w-full bg-neutral-900/50 border border-white/10 rounded-3xl py-5 pl-14 pr-6 focus:ring-2 focus:ring-white outline-none text-lg transition-all shadow-2xl font-inter" 
                                 />
                                 <div className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-400"><Icon name="search" size={22} /></div>
@@ -476,22 +498,9 @@
                             {showSuggestions && (
                                 <div className="absolute top-full left-0 right-0 mt-2 bg-neutral-900/95 backdrop-blur-3xl border border-white/10 rounded-3xl overflow-hidden z-40 shadow-2xl animate-slide-up">
                                     {suggestions.map(item => (
-                                        <div 
-                                            key={item.id} 
-                                            onClick={() => { 
-                                                setSelectedItem(item); 
-                                                setShowSuggestions(false); 
-                                                setIsFocused(false);
-                                                if (inputRef.current) inputRef.current.blur();
-                                            }}
-                                            className="px-6 py-3.5 hover:bg-white/5 cursor-pointer flex flex-row items-center gap-2 border-b border-white/5 last:border-0 overflow-hidden"
-                                        >
-                                            <span className="text-sm font-semibold font-inter tracking-tight truncate flex-1 uppercase">
-                                                {item.title || item.name}
-                                            </span>
-                                            <span className="text-[10px] text-neutral-400 font-inter shrink-0 uppercase tracking-tighter">
-                                                {(item.release_date || item.first_air_date || 'N/A').split('-')[0]} • {item.media_type}
-                                            </span>
+                                        <div key={item.id} onClick={() => { setSelectedItem(item); setShowSuggestions(false); setIsFocused(false); if (inputRef.current) inputRef.current.blur(); }} className="px-6 py-3.5 hover:bg-white/5 cursor-pointer flex flex-row items-center gap-2 border-b border-white/5 last:border-0 overflow-hidden">
+                                            <span className="text-sm font-semibold font-inter tracking-tight truncate flex-1 uppercase">{item.title || item.name}</span>
+                                            <span className="text-[10px] text-neutral-400 font-inter shrink-0 uppercase tracking-tighter">{(item.release_date || item.first_air_date || 'N/A').split('-')[0]} • {item.media_type}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -509,11 +518,7 @@
                                     <section>
                                         <div className="flex justify-between items-end mb-6">
                                             <h2 className="text-2xl font-oswald font-light uppercase tracking-wide">Movies</h2>
-                                            {movies.length > 4 && (
-                                                <button onClick={() => setShowAllMovies(!showAllMovies)} className="text-xs font-inter font-bold text-neutral-400 hover:text-white uppercase tracking-wider transition-colors pb-1">
-                                                    {showAllMovies ? 'Show Less' : 'Show All'}
-                                                </button>
-                                            )}
+                                            {movies.length > 4 && <button onClick={() => setShowAllMovies(!showAllMovies)} className="text-xs font-inter font-bold text-neutral-400 hover:text-white uppercase tracking-wider transition-colors pb-1">{showAllMovies ? 'Show Less' : 'Show All'}</button>}
                                         </div>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                             {(showAllMovies ? movies : movies.slice(0, 4)).map(item => <PosterItem key={`movie-${item.id}`} item={item} />)}
@@ -524,11 +529,7 @@
                                     <section>
                                         <div className="flex justify-between items-end mb-6">
                                             <h2 className="text-2xl font-oswald font-light uppercase tracking-wide">TV Series</h2>
-                                            {series.length > 4 && (
-                                                <button onClick={() => setShowAllSeries(!showAllSeries)} className="text-xs font-inter font-bold text-neutral-400 hover:text-white uppercase tracking-wider transition-colors pb-1">
-                                                    {showAllSeries ? 'Show Less' : 'Show All'}
-                                                </button>
-                                            )}
+                                            {series.length > 4 && <button onClick={() => setShowAllSeries(!showAllSeries)} className="text-xs font-inter font-bold text-neutral-400 hover:text-white uppercase tracking-wider transition-colors pb-1">{showAllSeries ? 'Show Less' : 'Show All'}</button>}
                                         </div>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                             {(showAllSeries ? series : series.slice(0, 4)).map(item => <PosterItem key={`tv-${item.id}`} item={item} />)}
@@ -539,6 +540,11 @@
                         )}
                     </main>
 
+                    <footer className="mt-auto py-12 px-6 flex flex-col items-center gap-4 opacity-40 border-t border-white/5">
+                        <img src="render.png" alt="TMDB Attribution" className="w-48 h-auto object-contain grayscale brightness-150" />
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-center text-white/60 max-w-xs leading-relaxed">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+                    </footer>
+
                     {selectedItem && (
                         <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-lg flex flex-col items-center justify-start p-4 overflow-y-auto">
                             <div className="absolute top-6 inset-x-6 flex justify-between items-center z-50">
@@ -546,33 +552,33 @@
                                 <button onClick={() => {setSelectedItem(null); setSeason(1); setEpisode('none'); setTvDetails({ seasons: [] }); setCustomPoster(null); setShowPosterPicker(false); setPersonalRating(0);}} className="p-2 text-white/60 hover:text-white transition-all"><Icon name="x" size={30} /></button>
                             </div>
                             
-                            <div className="w-full max-sm flex flex-col gap-6 pt-16 pb-12 animate-slide-up scale-[0.9] sm:scale-100 origin-top">
-                                <div className="relative aspect-[9/16] w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-neutral-950" style={{ backgroundColor: bgColor }}>
-                                    <div className="absolute inset-0 transition-opacity" style={{ opacity: 0.45 }}>
-                                        <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/p/w1280${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${activePoster}`} className="absolute inset-0 w-full h-full object-cover scale-[1.25] blur-[12px]" />
+                            <div className="w-full max-w-[440px] flex flex-col gap-6 pt-16 pb-12 animate-slide-up origin-top">
+                                {/* THE PREVIEW CONTAINER - STRICTLY 1:1 WITH RENDER COORDINATES */}
+                                <div className="relative aspect-[9/16] w-full rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-neutral-950 story-container" style={{ backgroundColor: bgColor }}>
+                                    <div className="absolute inset-0 z-0 pointer-events-none transition-opacity opacity-[0.45]">
+                                        <img src={backdropUrl} className="absolute inset-0 w-full h-full object-cover scale-[1.25] blur-[12px]" />
                                     </div>
-                                    <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, rgba(${hexToRgb(bgColor)}, ${bgOpacity * 0.1}), rgba(${hexToRgb(bgColor)}, ${bgOpacity}))` }}></div>
+                                    <div className="absolute inset-0 z-[1] pointer-events-none" style={{ background: `linear-gradient(to bottom, rgba(${hexToRgb(bgColor)}, ${bgOpacity * 0.1}), rgba(${hexToRgb(bgColor)}, ${bgOpacity}))` }}></div>
                                     
-                                    <div className="absolute inset-0 flex flex-col items-center">
-                                        <div className="w-[59.25%] aspect-[2/3] mt-[10.41%] shrink-0 relative">
-                                            <div className="w-full h-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+                                    <div className="absolute inset-0 flex flex-col items-center z-[2]">
+                                        {/* Poster Position: py=200/1920 = 10.41% FROM TOP */}
+                                        <div className="absolute top-[10.41%] w-[59.25%] aspect-[2/3] shrink-0">
+                                            <div className="w-full h-full rounded-[2.8rem] overflow-hidden border border-white/10 shadow-2xl">
                                                 <img src={`${TMDB_IMAGE_BASE}${activePoster}`} className="w-full h-full object-cover transition-all" />
                                             </div>
+                                            
                                             {canChangePoster && (
                                                 <div className="absolute top-6 right-0 translate-x-1/2 z-30 flex flex-col items-end">
-                                                    <button 
-                                                        onClick={() => setShowPosterPicker(!showPosterPicker)}
-                                                        className={`w-9 h-9 rounded-full grid place-items-center transition-all shadow-xl border ${showPosterPicker ? 'bg-yellow-400 border-yellow-300 text-black scale-105' : 'text-white bg-black/60 backdrop-blur-md border-white/20 hover:bg-black/80'}`}
-                                                    >
-                                                        <Icon name="settings" size={18} className="shrink-0 transform translate-y-[0.5px] translate-x-[0.5px]" />
-                                                    </button>
+                                                    <button onClick={() => setShowPosterPicker(!showPosterPicker)} className={`w-9 h-9 rounded-full grid place-items-center transition-all shadow-xl border ${showPosterPicker ? 'bg-yellow-400 border-yellow-300 text-black scale-105' : 'text-white bg-black/60 backdrop-blur-md border-white/20 hover:bg-black/80'}`}><Icon name="settings" size={18} /></button>
                                                     {showPosterPicker && (
-                                                        <div className="absolute top-12 right-0 w-28 sm:w-32 bg-neutral-900/95 backdrop-blur-xl border border-white/15 rounded-2xl p-2.5 shadow-2xl animate-slide-up flex flex-col origin-top-right">
-                                                            <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[220px] hide-scroll">
+                                                        <div className="absolute top-12 right-0 w-44 bg-neutral-900/95 backdrop-blur-3xl border border-white/15 rounded-3xl p-3 shadow-2xl animate-slide-up flex flex-col origin-top-right z-[60]">
+                                                            <div className="poster-picker-scroll flex flex-col gap-4 p-1">
                                                                 {availablePosters.map(p => (
-                                                                    <div key={p.id} onClick={() => { setCustomPoster(p.path); setShowPosterPicker(false); }} className={`relative w-full aspect-[2/3] rounded-xl overflow-hidden cursor-pointer transition-all ${activePoster === p.path ? 'border-[3px] border-yellow-400' : 'opacity-50 hover:opacity-100'}`}>
+                                                                    <div key={p.id} onClick={() => { setCustomPoster(p.path); setShowPosterPicker(false); }} className={`relative w-full aspect-[2/3] rounded-2xl overflow-hidden cursor-pointer transition-all shadow-lg border-2 shrink-0 ${activePoster === p.path ? 'border-yellow-400 scale-[1.03]' : 'border-white/10 opacity-60 hover:opacity-100'}`}>
                                                                         <img src={`${TMDB_IMAGE_BASE}${p.path}`} className="w-full h-full object-cover" />
-                                                                        <div className="absolute bottom-0 inset-x-0 bg-black/80 py-1 text-[8px] text-center font-bold text-white uppercase tracking-widest leading-tight">{p.label}</div>
+                                                                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/80 to-transparent pt-6 pb-2 px-1 text-center pointer-events-none">
+                                                                            <span className="text-[10px] font-black text-white uppercase tracking-widest leading-tight drop-shadow-md">{p.label}</span>
+                                                                        </div>
                                                                     </div>
                                                                 ))}
                                                             </div>
@@ -582,25 +588,46 @@
                                             )}
                                         </div>
                                         
-                                        <div className="text-center w-full px-8 mt-[7%] flex flex-col items-center justify-center">
-                                            <h3 className="text-2xl font-normal leading-tight uppercase text-white font-oswald drop-shadow-md text-center max-w-[90%] mb-2">{(selectedItem.title || selectedItem.name)}</h3>
-                                            {isTvSelected && showSeasonEpisode && (
-                                                <p className="text-[0.65rem] font-medium text-white/50 font-inter mb-4 tracking-widest uppercase">S{season.toString().padStart(2, '0')}{episode === 'none' ? "" : ` E${episode.toString().padStart(2, '0')}`}</p>
-                                            )}
-                                            <div className="inline-flex items-center justify-center bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-full font-inter border border-white/15">
-                                                <div className="flex items-center gap-2.5 sm:gap-3 text-[10px] sm:text-[11px] font-medium">
-                                                    <span>{(selectedItem.release_date || selectedItem.first_air_date || '').split('-')[0]}</span>
-                                                    <span className="w-1 h-1 bg-white/40 rounded-full"></span>
-                                                    <span className="text-yellow-400 font-bold">★ {selectedItem.vote_average?.toFixed(1) || '0.0'}</span>
-                                                    <span className="w-1 h-1 bg-white/40 rounded-full"></span>
-                                                    <span className="text-white/60 uppercase tracking-tight">{isTvSelected ? 'SERIES' : 'MOVIE'}</span>
+                                        {/* Title area matching currentY=1295/1920 = 67.44% FROM TOP */}
+                                        <div className="absolute top-[67.44%] w-full flex flex-col items-center">
+                                            {/* Baseline alignment mimic with accurate line height and font size ratio (70/1080) */}
+                                            <h3 className="font-normal uppercase text-white font-oswald drop-shadow-md text-center max-w-[85%] leading-tight" style={{ fontSize: '6.48cqw' }}>
+                                                {(selectedItem.title || selectedItem.name)}
+                                            </h3>
+                                            
+                                            <div className="flex flex-col items-center w-full">
+                                                {isTvSelected && showSeasonEpisode && (
+                                                    /* Gap series: 45px (2.34% of height) */
+                                                    <p className="font-medium text-white/50 font-inter tracking-[0.2em] uppercase mt-[1.5%]" style={{ fontSize: '2.22cqw' }}>
+                                                        S{season.toString().padStart(2, '0')}{episode === 'none' ? "" : ` E${episode.toString().padStart(2, '0')}`}
+                                                    </p>
+                                                )}
+                                                
+                                                {/* Info Box: boxH=72. Margin after text: 35px. 
+                                                    Height ratio: 72/1080 = 6.6% (relative to container width)
+                                                */}
+                                                <div className="inline-flex items-center justify-center bg-white/10 backdrop-blur-md rounded-full font-inter border border-white/15 mt-[3%] px-[4%] py-[1.8%]" style={{ height: '3.75cqh' }}>
+                                                    <div className="flex items-center gap-3 font-medium whitespace-nowrap" style={{ fontSize: '3.14cqw' }}>
+                                                        <span>{(selectedItem.release_date || selectedItem.first_air_date || '').split('-')[0]}</span>
+                                                        <span className="w-1 h-1 bg-white/40 rounded-full"></span>
+                                                        <span className="text-yellow-400 font-bold">★ {selectedItem.vote_average?.toFixed(1) || '0.0'}</span>
+                                                        <span className="w-1 h-1 bg-white/40 rounded-full"></span>
+                                                        <span className="text-white/60 uppercase tracking-tight">{isTvSelected ? 'SERIES' : 'MOVIE'}</span>
+                                                    </div>
                                                 </div>
+
+                                                {personalRating > 0 && (
+                                                    /* Gap stars: 45px. */
+                                                    <div className="flex items-center gap-2 mt-[4.5%] animate-slide-up">
+                                                        {[1, 2, 3, 4, 5].map(star => <Icon key={star} name="star" size={16} className={star <= personalRating ? "text-yellow-400 fill-yellow-400" : "text-white/30 fill-white/30"} />)}
+                                                    </div>
+                                                )}
                                             </div>
-                                            {personalRating > 0 && (
-                                                <div className="flex items-center gap-1.5 mt-3.5 animate-slide-up">
-                                                    {[1, 2, 3, 4, 5].map(star => <Icon key={star} name="star" size={13} className={star <= personalRating ? "text-yellow-400 fill-yellow-400" : "text-white/30 fill-white/30"} />)}
-                                                </div>
-                                            )}
+                                        </div>
+
+                                        {/* Footer Attribution y=1780. 1780/1920 = 92.7% position of center line */}
+                                        <div className="absolute bottom-[7.3%] left-0 right-0 flex justify-center opacity-20 pointer-events-none">
+                                            <img src="render.png" alt="" className="w-[26%] h-auto object-contain" />
                                         </div>
                                     </div>
                                 </div>
@@ -618,16 +645,10 @@
                                             {showSeasonEpisode && (
                                                 <div className="flex items-center gap-3 animate-slide-up">
                                                     <select value={season} onChange={(e) => setSeason(parseInt(e.target.value))} className="flex-1 bg-white/10 border border-white/10 rounded-xl py-2 px-3 text-center font-bold text-sm text-white">
-                                                        {airedSeasons.map(s => <option key={s.id} value={s.season_number} className="bg-neutral-900">S{s.season_number.toString().padStart(2, '0')}</option>)}
+                                                        {(tvDetails.seasons || []).filter(s => s.season_number > 0).map(s => <option key={s.id} value={s.season_number} className="bg-neutral-900">S{s.season_number.toString().padStart(2, '0')}</option>)}
                                                     </select>
-                                                    <select 
-                                                        value={episode} 
-                                                        onFocus={() => setIsEpDropdownOpen(true)}
-                                                        onBlur={() => setTimeout(() => setIsEpDropdownOpen(false), 100)}
-                                                        onChange={(e) => setEpisode(e.target.value === 'none' ? 'none' : parseInt(e.target.value))}
-                                                        className="flex-1 bg-white/10 border border-white/10 rounded-xl py-2 px-3 text-center font-bold text-sm text-white"
-                                                    >
-                                                        <option value="none" className="bg-neutral-900 italic">{(isEpDropdownOpen || episode !== 'none') ? "Do Not Show Episode" : "None"}</option>
+                                                    <select value={episode} onChange={(e) => setEpisode(e.target.value === 'none' ? 'none' : parseInt(e.target.value))} className="flex-1 bg-white/10 border border-white/10 rounded-xl py-2 px-3 text-center font-bold text-sm text-white">
+                                                        <option value="none" className="bg-neutral-900 italic">Episode</option>
                                                         {Array.from({ length: availableEpisodes }, (_, i) => i + 1).map(num => <option key={num} value={num} className="bg-neutral-900">E{num.toString().padStart(2, '0')}</option>)}
                                                     </select>
                                                 </div>
@@ -638,11 +659,7 @@
                                     <div className="flex items-center justify-between bg-white/5 backdrop-blur-xl px-5 sm:px-6 py-4 rounded-[2rem] border border-white/10">
                                         <div className="flex items-center gap-2 shrink-0"><Icon name="star" size={16} className="text-neutral-400" /><span className="text-[11px] sm:text-xs font-bold text-neutral-300 uppercase tracking-wide">Your Rating</span></div>
                                         <div className="flex items-center gap-1 sm:gap-2">
-                                            {[1, 2, 3, 4, 5].map(star => (
-                                                <button key={star} onClick={() => setPersonalRating(star === personalRating ? 0 : star)} className="hover:scale-110 active:scale-95 transition-transform">
-                                                    <Icon name="star" size={26} className={star <= personalRating ? "text-yellow-400 fill-yellow-400" : "text-white/20 fill-white/5"} />
-                                                </button>
-                                            ))}
+                                            {[1, 2, 3, 4, 5].map(star => <button key={star} onClick={() => setPersonalRating(star === personalRating ? 0 : star)} className="hover:scale-110 active:scale-95 transition-transform"><Icon name="star" size={26} className={star <= personalRating ? "text-yellow-400 fill-yellow-400" : "text-white/20 fill-white/5"} /></button>)}
                                         </div>
                                     </div>
 
