@@ -163,13 +163,15 @@
 
             const [showSeasonEpisode, setShowSeasonEpisode] = useState(false);
             const [season, setSeason] = useState(1);
-            const [episode, setEpisode] = useState(1); // 0 means "Do Not Show Episode"
+            const [episode, setEpisode] = useState(1); // 'none' means "Do Not Show Episode"
             const [tvDetails, setTvDetails] = useState({ seasons: [] });
-            const [seasonPoster, setSeasonPoster] = useState(null);
             const [availableEpisodes, setAvailableEpisodes] = useState(1);
             const [customPoster, setCustomPoster] = useState(null);
             const [showPosterPicker, setShowPosterPicker] = useState(false);
             const [personalRating, setPersonalRating] = useState(0);
+
+            // State to track if episode dropdown is open
+            const [isEpDropdownOpen, setIsEpDropdownOpen] = useState(false);
 
             const canvasRef = useRef(null);
 
@@ -411,7 +413,7 @@
                     if (isTv && showSeasonEpisode) {
                         ctx.font = '500 24px Inter, sans-serif';
                         ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-                        const epText = episode === 0 ? "" : ` E${episode.toString().padStart(2, '0')}`;
+                        const epText = episode === 'none' ? "" : ` E${episode.toString().padStart(2, '0')}`;
                         ctx.fillText(`S${season.toString().padStart(2, '0')}${epText}`, canvas.width / 2, currentY - 35);
                         currentY += 45; 
                     } else {
@@ -529,7 +531,6 @@
 
             const isTvSelected = selectedItem && (selectedItem.media_type === 'tv' || !selectedItem.title);
             
-            // Available posters: exclude specials (0) and only allow if more than 1 season
             const availablePosters = [];
             const validSeasons = tvDetails.seasons ? tvDetails.seasons.filter(s => s.season_number > 0) : [];
             
@@ -537,7 +538,6 @@
                 availablePosters.push({ id: 'main', path: selectedItem.poster_path, label: 'Main Poster' });
             }
 
-            // Only add season posters if there is more than 1 valid season
             if (isTvSelected && validSeasons.length > 1) {
                 validSeasons.forEach(s => {
                     if (s.poster_path && !availablePosters.find(p => p.path === s.poster_path)) {
@@ -630,7 +630,7 @@
                         <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-lg flex flex-col items-center justify-start p-4 overflow-y-auto">
                             <div className="absolute top-6 inset-x-6 flex justify-between items-center z-50">
                                 <span className="text-white/30 font-inter font-semibold tracking-widest uppercase text-sm pl-2 pointer-events-none">Preview</span>
-                                <button onClick={() => {setSelectedItem(null); setSeason(1); setEpisode(1); setTvDetails({ seasons: [] }); setSeasonPoster(null); setCustomPoster(null); setShowPosterPicker(false); setPersonalRating(0);}} className="p-2 text-white/60 hover:text-white transition-all"><Icon name="x" size={30} /></button>
+                                <button onClick={() => {setSelectedItem(null); setSeason(1); setEpisode(1); setTvDetails({ seasons: [] }); setCustomPoster(null); setShowPosterPicker(false); setPersonalRating(0);}} className="p-2 text-white/60 hover:text-white transition-all"><Icon name="x" size={30} /></button>
                             </div>
                             
                             <div className="w-full max-sm flex flex-col gap-6 pt-16 pb-12 animate-slide-up scale-[0.9] sm:scale-100 origin-top">
@@ -646,7 +646,6 @@
                                                 <img src={`${TMDB_IMAGE_BASE}${activePoster}`} className="w-full h-full object-cover transition-all" alt="Poster Preview" />
                                             </div>
                                             
-                                            {/* Gear Button for Poster Selection - Only if canChangePoster is true */}
                                             {canChangePoster && (
                                                 <div className="absolute top-6 right-0 translate-x-1/2 z-30 flex flex-col items-end">
                                                     <button 
@@ -657,7 +656,6 @@
                                                         <Icon name="settings" size={18} className="shrink-0 transform translate-y-[0.5px] translate-x-[0.5px]" />
                                                     </button>
 
-                                                    {/* Floating Scrollable Picker Menu */}
                                                     {showPosterPicker && (
                                                         <div className="absolute top-12 right-0 w-28 sm:w-32 bg-neutral-900/95 backdrop-blur-xl border border-white/15 rounded-2xl p-2.5 shadow-2xl animate-slide-up flex flex-col origin-top-right">
                                                             <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10 shrink-0">
@@ -684,7 +682,7 @@
 
                                             {isTvSelected && showSeasonEpisode && (
                                                 <p className="text-[0.65rem] font-medium text-white/50 font-inter mb-[3.5%] tracking-widest uppercase">
-                                                    S{season.toString().padStart(2, '0')}{episode === 0 ? "" : ` E${episode.toString().padStart(2, '0')}`}
+                                                    S{season.toString().padStart(2, '0')}{episode === 'none' ? "" : ` E${episode.toString().padStart(2, '0')}`}
                                                 </p>
                                             )}
                                             
@@ -750,10 +748,17 @@
                                                         <span className="text-[8px] font-bold text-neutral-500 uppercase font-inter">Episode</span>
                                                         <select 
                                                             value={episode} 
-                                                            onChange={(e) => setEpisode(parseInt(e.target.value))}
+                                                            onFocus={() => setIsEpDropdownOpen(true)}
+                                                            onBlur={() => setIsEpDropdownOpen(false)}
+                                                            onChange={(e) => {
+                                                                setEpisode(e.target.value === 'none' ? 'none' : parseInt(e.target.value));
+                                                                e.target.blur(); // auto-close visual helper
+                                                            }}
                                                             className="w-full bg-white/10 border border-white/10 rounded-xl py-2 px-3 text-center font-bold text-sm outline-none font-inter text-white"
                                                         >
-                                                            <option value={0} className="bg-neutral-900 text-white italic">Do Not Show Episode</option>
+                                                            <option value="none" className="bg-neutral-900 text-white italic">
+                                                                {isEpDropdownOpen ? "Do Not Show Episode" : (episode === 'none' ? "None" : "Do Not Show Episode")}
+                                                            </option>
                                                             {Array.from({ length: availableEpisodes }, (_, i) => i + 1).map(num => (
                                                                 <option key={num} value={num} className="bg-neutral-900 text-white">E{num.toString().padStart(2, '0')}</option>
                                                             ))}
