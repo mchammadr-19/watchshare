@@ -544,7 +544,7 @@
                         )}
                     </main>
 
-                    {/* WEB FOOTER REMAINS AS REQUESTED (attribution.svg with tap interaction) */}
+                    {/* WEB FOOTER UPDATED: centered logo, regular font, low opacity text */}
                     <footer className="py-12 px-6 flex flex-col items-center gap-4 border-t border-white/5">
                         <img 
                             src="attribution.svg" 
@@ -554,7 +554,9 @@
                                 logoTapped ? 'opacity-100' : 'brightness-0 invert opacity-25'
                             }`} 
                         />
-                        <p className="text-[10px] uppercase font-bold tracking-widest text-center text-white/60 max-w-xs leading-relaxed">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+                        <p className="text-[10px] uppercase font-normal tracking-widest text-center text-white/30 max-w-xs leading-relaxed">
+                            This product uses the TMDB API but is not endorsed or certified by TMDB.
+                        </p>
                     </footer>
 
                     {selectedItem && (
