@@ -153,7 +153,6 @@
             const inputRef = useRef(null);
 
             useEffect(() => {
-                // Jangan jalankan timer saran jika sedang loading atau input tidak fokus
                 if (loading || !isFocused) {
                     setShowSuggestions(false);
                     return;
@@ -182,17 +181,17 @@
 
             const fetchSuggestions = async (q) => {
                 try {
-                    const res = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${apiKey}&query=${encodeURIComponent(q)}&language=en-US&page=1`);
+                    // Added include_adult=false and explicit !item.adult filter
+                    const res = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${apiKey}&query=${encodeURIComponent(q)}&language=en-US&page=1&include_adult=false`);
                     const data = await res.json();
                     const filtered = (data.results || [])
-                        .filter(i => (i.media_type === 'movie' || i.media_type === 'tv') && i.poster_path)
+                        .filter(i => (i.media_type === 'movie' || i.media_type === 'tv') && i.poster_path && i.adult === false)
                         .filter(i => {
                             const date = i.release_date || i.first_air_date;
                             return date && date <= today;
                         })
                         .slice(0, 8); 
                     
-                    // Verifikasi ulang sebelum menampilkan
                     if (!loading && isFocused) {
                         setSuggestions(filtered);
                         setShowSuggestions(filtered.length > 0);
@@ -231,13 +230,12 @@
                 if (e) e.preventDefault();
                 if (!query || !apiKey) return;
                 
-                // FORCE HIDE & BLUR
                 setShowSuggestions(false);
                 setSuggestions([]);
-                setIsFocused(false); // Pastikan state fokus mati
+                setIsFocused(false); 
                 
                 if (inputRef.current) {
-                    inputRef.current.blur(); // Menyembunyikan keyboard secara paksa
+                    inputRef.current.blur(); 
                 }
                 
                 setLoading(true);
@@ -246,19 +244,20 @@
                 setHasEverSearched(true);
                 
                 try {
+                    // Added include_adult=false and explicit !item.adult filter
                     const [movieRes, tvRes] = await Promise.all([
-                        fetch(`https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US&page=1`),
-                        fetch(`https://api.themoviedb.org/3/search/tv?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US&page=1`)
+                        fetch(`https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US&page=1&include_adult=false`),
+                        fetch(`https://api.themoviedb.org/3/search/tv?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US&page=1&include_adult=false`)
                     ]);
                     const movieData = await movieRes.json();
                     const tvData = await tvRes.json();
                     
                     setMovies((movieData.results || [])
-                        .filter(i => i.poster_path && i.release_date && i.release_date <= today)
+                        .filter(i => i.poster_path && i.release_date && i.release_date <= today && i.adult === false)
                         .map(item => ({...item, media_type: 'movie'}))
                     );
                     setSeries((tvData.results || [])
-                        .filter(i => i.poster_path && i.first_air_date && i.first_air_date <= today)
+                        .filter(i => i.poster_path && i.first_air_date && i.first_air_date <= today && i.adult === false)
                         .map(item => ({...item, media_type: 'tv'}))
                     );
                 } catch (err) { setError(err.message); }
@@ -286,7 +285,7 @@
 
                     const bgImg = new Image();
                     bgImg.crossOrigin = "anonymous";
-                    bgImg.src = item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}?canvas=true` : `${TMDB_IMAGE_BASE}${posterToUse}?canvas=true`;
+                    bgImg.src = item.backdrop_path ? `https://image.tmdb.org/p/w1280${item.backdrop_path}?canvas=true` : `${TMDB_IMAGE_BASE}${posterToUse}?canvas=true`;
                     await new Promise(r => { bgImg.onload = r; bgImg.onerror = r; });
                     if (bgImg.complete) {
                         ctx.save(); ctx.globalAlpha = 0.45; ctx.filter = 'blur(25px)';
@@ -462,10 +461,13 @@
                                     value={query} 
                                     onFocus={() => setIsFocused(true)}
                                     onBlur={() => {
-                                        // Delay sedikit agar klik pada suggestion sempat diproses sebelum focus hilang
                                         setTimeout(() => setIsFocused(false), 200);
                                     }}
                                     onChange={(e) => setQuery(e.target.value)} 
+                                    autoComplete="off"
+                                    autoCorrect="off"
+                                    autoCapitalize="off"
+                                    spellCheck="false"
                                     className="w-full bg-neutral-900/50 border border-white/10 rounded-3xl py-5 pl-14 pr-6 focus:ring-2 focus:ring-white outline-none text-lg transition-all shadow-2xl font-inter" 
                                 />
                                 <div className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-400"><Icon name="search" size={22} /></div>
@@ -547,7 +549,7 @@
                             <div className="w-full max-sm flex flex-col gap-6 pt-16 pb-12 animate-slide-up scale-[0.9] sm:scale-100 origin-top">
                                 <div className="relative aspect-[9/16] w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-neutral-950" style={{ backgroundColor: bgColor }}>
                                     <div className="absolute inset-0 transition-opacity" style={{ opacity: 0.45 }}>
-                                        <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/t/p/w1280${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${activePoster}`} className="absolute inset-0 w-full h-full object-cover scale-[1.25] blur-[12px]" />
+                                        <img src={selectedItem.backdrop_path ? `https://image.tmdb.org/p/w1280${selectedItem.backdrop_path}` : `${TMDB_IMAGE_BASE}${activePoster}`} className="absolute inset-0 w-full h-full object-cover scale-[1.25] blur-[12px]" />
                                     </div>
                                     <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, rgba(${hexToRgb(bgColor)}, ${bgOpacity * 0.1}), rgba(${hexToRgb(bgColor)}, ${bgOpacity}))` }}></div>
                                     
@@ -581,7 +583,6 @@
                                         </div>
                                         
                                         <div className="text-center w-full px-8 mt-[7%] flex flex-col items-center justify-center">
-                                            {/* Changed to font-normal for Regular feel on story canvas */}
                                             <h3 className="text-2xl font-normal leading-tight uppercase text-white font-oswald drop-shadow-md text-center max-w-[90%] mb-2">{(selectedItem.title || selectedItem.name)}</h3>
                                             {isTvSelected && showSeasonEpisode && (
                                                 <p className="text-[0.65rem] font-medium text-white/50 font-inter mb-4 tracking-widest uppercase">S{season.toString().padStart(2, '0')}{episode === 'none' ? "" : ` E${episode.toString().padStart(2, '0')}`}</p>
