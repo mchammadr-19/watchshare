@@ -162,6 +162,7 @@
             const [installPrompt, setInstallPrompt] = useState(null);
             const [showIOSInstructions, setShowIOSInstructions] = useState(false);
             const [isInstalled, setIsInstalled] = useState(false);
+            const [installButtonPermanentlyHidden, setInstallButtonPermanentlyHidden] = useState(false);
 
             const canvasRef = useRef(null);
             const suggestionRef = useRef(null);
@@ -310,9 +311,8 @@
             };
 
             const resetHome = () => {
-                setQuery(''); setMovies([]); setSeries([]); setHasSearched(false); setHasEverSearched(false);
-                setSelectedItem(null); setError(null); setShowAllMovies(false); setShowAllSeries(false);
-                setCustomPoster(null); setShowPosterPicker(false); setPersonalRating(0);
+                // UPDATED: Now refreshes the web page instead of just clearing state
+                window.location.reload();
             };
 
             const handleInstall = async () => {
@@ -321,7 +321,6 @@
                     return;
                 }
                 if (!installPrompt) {
-                    // Fallback: If no prompt but tapped, maybe show alert or just try a standard prompt if supported
                     console.log("No install prompt available yet");
                     return;
                 }
@@ -525,7 +524,10 @@
                                     type="text" 
                                     placeholder="Search movies or tv series..." 
                                     value={query} 
-                                    onFocus={() => setIsFocused(true)}
+                                    onFocus={() => { 
+                                        setIsFocused(true);
+                                        setInstallButtonPermanentlyHidden(true);
+                                    }}
                                     onBlur={() => setTimeout(() => setIsFocused(false), 200)}
                                     onChange={(e) => setQuery(e.target.value)} 
                                     autoComplete="off"
@@ -593,12 +595,12 @@
                         </p>
                     </footer>
 
-                    {/* UPDATED INSTALL BUTTON: Reduced width using w-fit and horizontal padding */}
-                    {!isInstalled && (
-                        <div className="fixed bottom-8 left-0 right-0 z-40 flex justify-center px-6 animate-slide-up">
+                    {/* INSTALL BUTTON: Centered in page and disappears permanently on search focus */}
+                    {!isInstalled && !installButtonPermanentlyHidden && (
+                        <div className="fixed inset-0 z-40 flex items-center justify-center px-6 pointer-events-none">
                             <button 
                                 onClick={handleInstall}
-                                className="w-fit px-10 bg-white text-black py-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(255,255,255,0.2)] active:scale-95 transition-all text-sm uppercase tracking-widest border border-black/5"
+                                className="w-fit px-6 bg-white text-black py-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-[0_30px_60px_rgba(255,255,255,0.25)] active:scale-95 transition-all text-sm uppercase tracking-widest border border-black/5 pointer-events-auto animate-slide-up"
                             >
                                 <Icon name="download" size={20} />
                                 <span>Install Application</span>
