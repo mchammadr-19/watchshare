@@ -366,6 +366,7 @@
 
                     const bgImg = new Image();
                     bgImg.crossOrigin = "anonymous";
+                    // Fixed TMDB image URL typo (/t/p/ instead of /p/)
                     bgImg.src = item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}?canvas=true` : `${TMDB_IMAGE_BASE}${posterToUse}?canvas=true`;
                     await new Promise(r => { bgImg.onload = r; bgImg.onerror = r; });
                     if (bgImg.complete) {
@@ -402,7 +403,11 @@
                     
                     const lineHeight = fontSize + 12;
                     const totalHeight = lines.length * lineHeight;
+                    
                     let currentY = 1355 - (totalHeight / 2); 
+                    if (lines.length > 1) {
+                        currentY += 35; // Shift down for multi-line titles as requested
+                    }
                     
                     ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 15; ctx.shadowOffsetY = 5;
                     lines.forEach(l => { 
@@ -526,6 +531,7 @@
 
             const activePoster = customPoster || selectedItem?.poster_path || '';
             const canChangePoster = availablePosters.length > 1;
+            // Fixed TMDB image URL typo (/t/p/ instead of /p/)
             const backdropUrl = selectedItem?.backdrop_path 
                 ? `https://image.tmdb.org/t/p/w1280${selectedItem.backdrop_path}` 
                 : `${TMDB_IMAGE_BASE}${activePoster}`;
