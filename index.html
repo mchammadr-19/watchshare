@@ -593,12 +593,12 @@
                         </p>
                     </footer>
 
-                    {/* UPDATED INSTALL BUTTON: Shown if not in standalone mode */}
+                    {/* UPDATED INSTALL BUTTON: Reduced width using w-fit and horizontal padding */}
                     {!isInstalled && (
                         <div className="fixed bottom-8 left-0 right-0 z-40 flex justify-center px-6 animate-slide-up">
                             <button 
                                 onClick={handleInstall}
-                                className="w-full max-w-sm bg-white text-black py-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(255,255,255,0.2)] active:scale-95 transition-all text-sm uppercase tracking-widest border border-black/5"
+                                className="w-fit px-10 bg-white text-black py-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(255,255,255,0.2)] active:scale-95 transition-all text-sm uppercase tracking-widest border border-black/5"
                             >
                                 <Icon name="download" size={20} />
                                 <span>Install Application</span>
