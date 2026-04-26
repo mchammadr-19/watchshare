@@ -191,6 +191,7 @@
                         })
                         .slice(0, 8); 
                     
+                    // Pastikan tidak memunculkan saran jika user keburu menekan enter (loading = true)
                     if (!loading) {
                         setSuggestions(filtered);
                         setShowSuggestions(filtered.length > 0);
@@ -229,10 +230,12 @@
                 if (e) e.preventDefault();
                 if (!query || !apiKey) return;
                 
-                // FORCE HIDE & BLUR
+                // FORCE HIDE SUGGESTIONS & HIDE KEYBOARD
                 setShowSuggestions(false);
                 setSuggestions([]);
-                if (inputRef.current) inputRef.current.blur(); // Melepaskan fokus input
+                if (inputRef.current) {
+                    inputRef.current.blur(); // Menyembunyikan keyboard secara paksa
+                }
                 
                 setLoading(true);
                 setError(null);
@@ -309,6 +312,7 @@
 
                     ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
                     const titleStr = (item.title || item.name).toUpperCase();
+                    // Keep 400 for Regular weight on story canvas
                     ctx.font = '400 70px Oswald, sans-serif';
                     const lines = getBalancedLines(ctx, titleStr, 750);
                     let currentY = 1295; 
@@ -565,6 +569,7 @@
                                         </div>
                                         
                                         <div className="text-center w-full px-8 mt-[7%] flex flex-col items-center justify-center">
+                                            {/* Changed to font-normal for Regular feel on story canvas */}
                                             <h3 className="text-2xl font-normal leading-tight uppercase text-white font-oswald drop-shadow-md text-center max-w-[90%] mb-2">{(selectedItem.title || selectedItem.name)}</h3>
                                             {isTvSelected && showSeasonEpisode && (
                                                 <p className="text-[0.65rem] font-medium text-white/50 font-inter mb-4 tracking-widest uppercase">S{season.toString().padStart(2, '0')}{episode === 'none' ? "" : ` E${episode.toString().padStart(2, '0')}`}</p>
