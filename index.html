@@ -1,852 +1,1098 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#000000">
-    <title>WatchShare - Story Canvas Editor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Bincang Kenal - Premium Edition</title>
     
-    <!-- PWA Icons & Dynamic Manifest Placeholder -->
-    <link rel="icon" type="image/png" href="Icon.png">
-    <link rel="apple-touch-icon" href="Icon.png">
-    <link rel="manifest" id="manifest-placeholder">
-
-    <script>
-        window.deferredPrompt = null;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            window.deferredPrompt = e;
-            window.dispatchEvent(new CustomEvent('pwa-prompt-ready'));
-        });
-
-        (() => {
-            const manifest = {
-                "name": "WatchShare Story Editor",
-                "short_name": "WatchShare",
-                "description": "Create amazing movie stories for your social media",
-                "display": "standalone",
-                "background_color": "#000000",
-                "theme_color": "#000000",
-                "start_url": ".",
-                "scope": ".",
-                "icons": [
-                    { "src": "Icon.png", "sizes": "192x192", "type": "image/png" },
-                    { "src": "Icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
-                ]
-            };
-            const manifestUrl = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
-            document.getElementById('manifest-placeholder').href = manifestUrl;
-        })();
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                const swCode = `
-                    self.addEventListener('install', (e) => self.skipWaiting());
-                    self.addEventListener('activate', (e) => self.clients.claim());
-                    self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => new Response('Offline'))));
-                `;
-                const swBlob = new Blob([swCode], { type: 'application/javascript' });
-                navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(err => console.log('SW Setup bypassed', err));
-            });
-        }
-    </script>
-
+    <!-- Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Oswald:wght@200;300;400;500;700&display=swap');
+        /* Base & Reset */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         
-        body { font-family: 'Inter', sans-serif; background-color: black; color: white; overflow-x: hidden; min-height: 100vh; display: flex; flex-direction: column; }
-        #root { display: flex; flex-direction: column; flex-grow: 1; }
-        .font-oswald { font-family: 'Oswald', sans-serif; }
-        .font-inter { font-family: 'Inter', sans-serif; }
-        
-        @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
-        
-        .hide-scroll::-webkit-scrollbar { display: none; }
-        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #000; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-        
-        select {
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 0.5rem center;
-            background-size: 1.2em;
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #450a0a;
+            color: #ffffff;
+            touch-action: manipulation;
+            min-height: 100dvh;
+            overflow: hidden; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-weight: 400;
+            position: relative;
         }
 
-        .poster-picker-scroll {
-            max-height: 400px;
-            overflow-y: auto;
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+        /* Animated Premium Background */
+        .bg-layer {
+            position: fixed; inset: 0; z-index: -2;
+            background: radial-gradient(circle at center, #7f1d1d 0%, #3f0909 100%);
+            transition: background 0.6s ease;
+            overflow: hidden;
         }
-        .poster-picker-scroll::-webkit-scrollbar {
-            display: none;
+        .bg-layer::before, .bg-layer::after {
+            content: ''; position: absolute; border-radius: 50%;
+            filter: blur(80px); opacity: 0.5;
+            animation: floatOrb 10s infinite alternate ease-in-out;
+        }
+        .bg-layer::before { width: 50vw; height: 50vw; background: #dc2626; top: -10%; left: -10%; }
+        .bg-layer::after { width: 40vw; height: 40vw; background: #b91c1c; bottom: -10%; right: -10%; animation-delay: -5s; }
+        @keyframes floatOrb { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(10%, 10%) scale(1.1); } }
+
+        /* Theming */
+        body.theme-red .bg-layer { background: radial-gradient(circle at center, #dc2626 0%, #7f1d1d 100%); }
+        body.theme-red .bg-layer::before { background: #ef4444; }
+        body.theme-green .bg-layer { background: radial-gradient(circle at center, #16a34a 0%, #14532d 100%); }
+        body.theme-green .bg-layer::before { background: #22c55e; }
+        body.theme-green .bg-layer::after { background: #15803d; }
+
+        /* Flying Chatboxes (Background Decor) */
+        .flying-chat {
+            position: absolute;
+            bottom: -100px;
+            opacity: 0.03;
+            animation: floatUp linear infinite;
+            color: white;
+            pointer-events: none;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0) rotate(0deg) scale(0.8); opacity: 0; }
+            10% { opacity: 0.08; }
+            80% { opacity: 0.08; }
+            100% { transform: translateY(-120vh) rotate(25deg) scale(1.2); opacity: 0; }
         }
 
-        .story-container { container-type: inline-size; }
+        /* Glassmorphism */
+        .glass { 
+            background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); 
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.3);
+        }
+        .card-glass { 
+            background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); 
+            box-shadow: 0 15px 50px -10px rgba(0,0,0,0.4), inset 0 0 20px rgba(255,255,255,0.05);
+        }
+        .glass-btn { 
+            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-btn:hover { background: rgba(255, 255, 255, 0.15); transform: translateY(-2px); box-shadow: 0 8px 25px -5px rgba(0,0,0,0.3); border-color: rgba(255, 255, 255, 0.3); }
+        .glass-btn:active { background: rgba(255, 255, 255, 0.25); transform: translateY(1px) scale(0.97); }
+        .glass-input { background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.15); color: white; transition: all 0.3s ease; }
+        .glass-input:focus { background: rgba(0, 0, 0, 0.4); border-color: rgba(255, 255, 255, 0.5); box-shadow: 0 0 20px rgba(255,255,255,0.15); }
+
+        /* Card 3D System */
+        .card-container { 
+            perspective: 2000px; width: 88vw; max-width: 380px; height: 50vh; min-height: 320px; 
+            position: relative; margin: auto; z-index: 10; transition: transform 0.2s ease;
+        }
+        .card-container:active { transform: scale(0.98); }
+        .card-inner { 
+            position: absolute; inset: 0; transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-style: preserve-3d; transform: rotateY(var(--rot, 0deg)); 
+        }
+        .card-face { 
+            position: absolute; inset: 0; -webkit-backface-visibility: hidden; backface-visibility: hidden; 
+            border-radius: 2.5rem; padding: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            text-align: center; overflow-y: auto; scrollbar-width: none; 
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            -webkit-transform: translateZ(0); transform: translateZ(0);
+        }
+        .card-face::-webkit-scrollbar { display: none; }
+        .card-back { transform: rotateY(180deg) translateZ(0); -webkit-transform: rotateY(180deg) translateZ(0); }
+        .wildcard-bg { 
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(185, 28, 28, 0.95)) !important; 
+            border: 1px solid rgba(255, 255, 255, 0.6) !important; box-shadow: 0 0 40px rgba(239, 68, 68, 0.4), inset 0 0 20px rgba(255,255,255,0.2);
+        }
+
+        /* Animations & Utils */
+        .animate-fade { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        
+        .floating-name { 
+            animation: floatName 4s ease-in-out infinite alternate; position: absolute; padding: 0.5rem 1.25rem; 
+            border-radius: 999px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); 
+            backdrop-filter: blur(10px); font-size: 0.9rem; font-weight: 600; letter-spacing: 0.05em; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: all 0.2s ease;
+        }
+        .floating-name:hover { background: rgba(239, 68, 68, 0.8); transform: scale(1.1) !important; animation-play-state: paused; }
+        @keyframes floatName { 0% { transform: translateY(0px) rotate(-1deg); } 100% { transform: translateY(-10px) rotate(1deg); } }
+
+        .loader { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.2); border-radius: 50%; display: inline-block; position: relative; animation: rotation 1s linear infinite; }
+        .loader::after { content: ''; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 48px; height: 48px; border-radius: 50%; border: 3px solid transparent; border-bottom-color: #fff; }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        #toast { transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease; transform: translateY(-150%); opacity: 0; pointer-events: none; }
+        #toast.show { transform: translateY(0); opacity: 1; pointer-events: auto; }
+        
+        /* QR Code Optimized for PC */
+        #qrcode img { margin: auto; border-radius: 1.5rem; padding: 1.25rem; background: white; width: 100%; max-width: 380px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        
+        .custom-scroll { overflow-y: auto; scrollbar-width: none; }
+        .custom-scroll::-webkit-scrollbar { display: none; }
+        input::placeholder, textarea::placeholder { color: rgba(255, 255, 255, 0.4); font-weight: 300; }
+
+        /* Swipe Exit */
+        #btn-guest-leave {
+            position: fixed; top: env(safe-area-inset-top, 1rem); right: 0; transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(15px); padding: 0.6rem 1rem 0.6rem 1.25rem;
+            border-radius: 2rem 0 0 2rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; 
+            font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: white; z-index: 1000; box-shadow: -5px 0 20px rgba(0,0,0,0.3);
+        }
+        #btn-guest-leave.active { transform: translateX(0); }
+        
+        .pulse-text { animation: pulseText 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulseText { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
     </style>
 </head>
-<body>
-    <div id="root"></div>
+<body class="p-4 md:p-8 pt-[env(safe-area-inset-top,1rem)] pb-[env(safe-area-inset-bottom,1rem)]" id="main-body" onclick="SFX.init()">
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+    <div class="bg-layer"></div>
+    <!-- Floating Chatboxes Container -->
+    <div id="chat-bg-container" class="fixed inset-0 overflow-hidden pointer-events-none z-[-1]"></div>
+    
+    <div id="toast" class="fixed top-8 left-1/2 -translate-x-1/2 glass text-white px-5 py-2.5 rounded-full shadow-2xl z-[500] font-semibold text-xs md:text-sm text-center max-w-[90vw] whitespace-nowrap border-white/30"></div>
+
+    <!-- MODALS -->
+    <div id="modal-howto" class="fixed inset-0 z-[2000] hidden flex flex-col items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity">
+        <div class="glass p-6 md:p-8 rounded-[2rem] max-w-md w-full relative animate-fade border border-white/20 shadow-2xl">
+            <button onclick="UI.closeModal('modal-howto')" class="absolute top-4 right-4 bg-white/10 hover:bg-red-500/50 p-2 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            <h2 class="text-xl md:text-2xl font-bold mb-4 flex items-center gap-2 tracking-wide"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg> Cara Main</h2>
+            <div class="space-y-3 text-sm leading-relaxed opacity-90 custom-scroll max-h-[50vh]">
+                <p><strong>1. Deep Talk (Biasa):</strong> Pemain yang mendapat giliran (layar hijau) harus menjawab pertanyaan dengan jujur. Setelah itu, geser kartu.</p>
+                <p><strong>2. Kartu Vote:</strong> Semua pemain memilih "Siapa yang paling cocok" di HP masing-masing dalam 30 detik. Pemilih terbanyak harus menjelaskan/dihukum!</p>
+                <p><strong>3. Wildcard:</strong> Kartu langka! Kamu boleh melempar pertanyaan bebas ke pemain manapun.</p>
+                <div class="mt-3 pt-3 border-t border-white/20 text-xs opacity-70">
+                    <p><em>Sistem secara otomatis menggilir pemain agar semua mendapat giliran yang adil.</em></p>
+                </div>
+            </div>
+            <button onclick="UI.closeModal('modal-howto')" class="mt-5 w-full py-3 bg-white text-black font-bold uppercase tracking-widest rounded-xl hover:bg-gray-200 text-sm">Paham!</button>
+        </div>
+    </div>
+
+    <div id="modal-resume" class="fixed inset-0 z-[2000] hidden flex flex-col items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity">
+        <div class="glass p-6 md:p-8 rounded-[2rem] max-w-sm w-full relative animate-fade text-center border border-white/20">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mx-auto mb-3 text-yellow-400"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <h2 class="text-lg font-bold mb-1">Game Tersimpan</h2>
+            <p class="text-xs opacity-70 mb-6">Gemi menemukan permainan lokal yang belum selesai. Lanjutkan?</p>
+            <div class="flex flex-col gap-2">
+                <button onclick="Game.startLocal(true)" class="w-full py-3 bg-white text-black font-bold uppercase tracking-widest rounded-xl hover:bg-gray-200 shadow-lg text-sm">Lanjutkan</button>
+                <button onclick="Game.startLocal(false)" class="w-full py-3 glass-btn font-bold uppercase tracking-widest rounded-xl text-xs hover:bg-red-500/20">Mulai Baru</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCREENS -->
+    <!-- 1. MAIN MENU -->
+    <div id="screen-main-menu" class="screen max-w-md mx-auto flex flex-col h-[100dvh] justify-center items-center text-center py-6 w-full animate-fade overflow-y-auto custom-scroll relative z-10">
+        <div class="absolute top-2 right-2 md:top-4 md:right-4 flex gap-2 z-50">
+            <button onclick="UI.openModal('modal-howto')" class="bg-white/10 hover:bg-white/20 p-2.5 rounded-full transition-all border border-white/10 backdrop-blur-sm" title="Cara Main">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+            </button>
+            <button onclick="UI.openAdminLogin()" class="bg-white/10 hover:bg-white/20 p-2.5 rounded-full transition-all border border-white/10 backdrop-blur-sm" title="Admin">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </button>
+        </div>
         
-        const Icon = ({ name, size = 24, className = "" }) => {
-            const icons = {
-                settings: <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2zM12 15a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" />,
-                search: <><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>,
-                heart: <path d="M19 14c1.46 1.46 3 3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />,
-                x: <path d="M18 6 6 18M6 6l12 12" />,
-                share: <><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></>,
-                tv: <><rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><polyline points="7 2 12 7 17 2"/></>,
-                film: <><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M17 3v18"/><path d="M3 7h4"/><path d="M3 12h18"/><path d="M3 17h4"/><path d="M17 17h4"/><path d="M17 7h4"/></>,
-                alert: <><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></>,
-                download: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />,
-                star: <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />,
-                iosShare: <path d="M12 3v12m0-12l-3 3m3-3l3 3M5 10v10a2 2 0 002 2h10a2 2 0 002-2V10" />
-            };
-            return (
-                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-                    {icons[name] || null}
-                </svg>
-            );
-        };
+        <div class="mb-10 mt-6 shrink-0 flex flex-col items-center justify-center">
+            <!-- Custom Logo -->
+            <img src="logo.png" alt="Bincang Kenal Logo" class="w-64 md:w-80 object-contain drop-shadow-[0_10px_25px_rgba(0,0,0,0.6)] mb-2 z-10 transition-transform hover:scale-105 duration-500" onerror="this.style.display='none'; document.getElementById('fallback-text-logo').style.display='block';">
+            
+            <!-- Fallback if image fails to load -->
+            <div id="fallback-text-logo" style="display:none;" class="text-center">
+                <h1 class="text-5xl md:text-7xl font-bold tracking-tighter leading-none mb-1 drop-shadow-lg">Bincang</h1>
+                <h1 class="text-4xl md:text-6xl font-light tracking-wide opacity-90 drop-shadow-md">Kenal</h1>
+            </div>
+            
+            <p id="global-pool-status" class="text-[10px] text-green-300 font-bold mt-2 tracking-widest uppercase opacity-80 h-4 bg-black/20 px-3 py-1 rounded-full backdrop-blur-md"></p>
+        </div>
+        
+        <div class="flex flex-col gap-4 w-full px-4 shrink-0">
+            <button onclick="Game.initLocalCheck()" class="glass-btn p-5 md:p-6 rounded-[2rem] flex flex-col items-center justify-center relative overflow-hidden group">
+                <div class="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mb-2 opacity-80 group-hover:scale-110 transition-transform"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <h3 class="text-lg md:text-xl font-semibold mb-1 tracking-wide">Play with Friend</h3>
+                <p class="text-[11px] md:text-xs opacity-70 font-light">Main bergantian di perangkat ini</p>
+            </button>
+            
+            <button onclick="UI.openPartyMenu()" class="glass-btn p-5 md:p-6 rounded-[2rem] flex flex-col items-center justify-center relative overflow-hidden group">
+                <div class="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mb-2 opacity-80 group-hover:scale-110 transition-transform"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                <h3 class="text-lg md:text-xl font-semibold mb-1 tracking-wide">Party Pack</h3>
+                <p class="text-[11px] md:text-xs opacity-70 font-light">Main multiplayer dengan banyak HP</p>
+            </button>
+        </div>
+    </div>
 
-        const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
-        const STORY_LOGO_URL = "https://raw.githubusercontent.com/mchammadr-19/watchshare/main/render.png";
+    <!-- 1.1 ADMIN LOGIN -->
+    <div id="screen-admin-login" class="screen hidden w-full max-w-md mx-auto flex flex-col justify-center h-[100dvh] animate-fade px-4 relative z-10">
+        <button onclick="UI.switch('screen-main-menu')" class="absolute top-4 left-4 bg-white/10 hover:bg-white/20 p-2.5 rounded-full transition-all border border-white/10 backdrop-blur-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <div class="glass p-8 rounded-[2.5rem] space-y-6 shadow-2xl relative overflow-hidden">
+            <div class="flex justify-center mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="opacity-80"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <h2 class="text-xl font-bold uppercase tracking-[0.2em] text-center drop-shadow-md">Admin Area</h2>
+            <input type="password" id="admin-pass" placeholder="PASSWORD" class="glass-input w-full p-4 rounded-xl text-center text-lg font-bold tracking-widest placeholder-white/40" autocomplete="off">
+            <button onclick="UI.submitAdminPass()" class="w-full py-4 bg-white hover:bg-gray-200 text-black font-bold tracking-[0.15em] uppercase rounded-xl text-sm transition-all active:scale-95 shadow-[0_0_15px_rgba(255,255,255,0.3)]">Masuk</button>
+        </div>
+    </div>
 
-        const hexToRgb = (hex) => {
-            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-            return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '0,0,0';
-        };
+    <!-- 2. ADMIN DASHBOARD / EDIT CARDS -->
+    <div id="screen-admin" class="screen hidden w-full max-w-2xl mx-auto flex flex-col h-[100dvh] py-6 px-4 animate-fade relative z-10">
+        <div class="flex items-center justify-between mb-6 shrink-0">
+            <button onclick="UI.switch('screen-main-menu')" class="bg-white/10 hover:bg-white/20 p-2.5 rounded-full transition-all border border-white/10 backdrop-blur-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <h2 class="text-xl font-bold tracking-wide">Dapur Admin</h2>
+            <div class="w-10"></div> 
+        </div>
 
-        const App = () => {
-            const MY_KEY = '0799284e10b09964527f237932e0290c'; 
-            const today = new Date().toISOString().split('T')[0];
+        <div class="overflow-y-auto custom-scroll space-y-5 flex-grow pb-8 px-1">
+            <!-- AI GENERATOR IN ADMIN -->
+            <div class="glass p-6 rounded-[2rem] border border-blue-500/30 relative overflow-hidden bg-blue-900/10">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                <h3 class="text-base font-semibold text-blue-300 mb-4 flex items-center gap-2 relative z-10">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                    Sistem Generator AI
+                </h3>
+                <p class="text-xs opacity-70 mb-4 text-blue-100 relative z-10 leading-relaxed">Isi database cloud secara otomatis. Sistem akan mencoba Groq, OpenAI, lalu Gemini (Auto-Fallback).</p>
+                <button id="btn-generate-ai" onclick="AIManager.generateDeck()" class="w-full py-3.5 rounded-xl text-[11px] font-bold tracking-[0.15em] uppercase transition-all shadow-lg flex items-center justify-center gap-2 bg-blue-600/60 hover:bg-blue-500 border border-blue-400/50 relative z-10">
+                    Mulai Generate Kartu
+                </button>
+                <p id="ai-status" class="text-[10px] mt-3 h-4 opacity-90 text-center transition-colors duration-300 font-medium relative z-10"></p>
+            </div>
 
-            const [apiKey] = useState(MY_KEY);
-            const [query, setQuery] = useState('');
-            const [movies, setMovies] = useState([]);
-            const [series, setSeries] = useState([]);
-            const [suggestions, setSuggestions] = useState([]);
-            const [showSuggestions, setShowSuggestions] = useState(false);
-            const [isFocused, setIsFocused] = useState(false);
-            const [selectedItem, setSelectedItem] = useState(null);
-            const [loading, setLoading] = useState(false);
-            const [error, setError] = useState(null);
-            const [generating, setGenerating] = useState(false);
-            const [bgColor, setBgColor] = useState('#000000');
-            const [bgOpacity, setBgOpacity] = useState(1);
-            const [hasSearched, setHasSearched] = useState(false);
-            const [hasEverSearched, setHasEverSearched] = useState(false);
-            const [showAllMovies, setShowAllMovies] = useState(false);
-            const [showAllSeries, setShowAllSeries] = useState(false);
-            const [showSeasonEpisode, setShowSeasonEpisode] = useState(false);
-            const [season, setSeason] = useState(1);
-            const [episode, setEpisode] = useState('none');
-            const [tvDetails, setTvDetails] = useState({ seasons: [] });
-            const [availableEpisodes, setAvailableEpisodes] = useState(1);
-            const [customPoster, setCustomPoster] = useState(null);
-            const [showPosterPicker, setShowPosterPicker] = useState(false);
-            const [personalRating, setPersonalRating] = useState(0);
-            const [logoTapped, setLogoTapped] = useState(false);
-            const [installPrompt, setInstallPrompt] = useState(null);
-            const [showIOSInstructions, setShowIOSInstructions] = useState(false);
-            const [isInstalled, setIsInstalled] = useState(false);
-            const [installButtonPermanentlyHidden, setInstallButtonPermanentlyHidden] = useState(false);
+            <div class="glass p-5 md:p-6 rounded-[2rem]">
+                <h3 class="text-base font-semibold text-white mb-4 flex items-center gap-2 border-b border-white/10 pb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg> 
+                    Kartu Default (Lokal)
+                </h3>
+                <label class="block text-[10px] mb-1.5 opacity-70 uppercase tracking-widest font-semibold">Deep Talk</label>
+                <textarea id="edit-default-q" class="glass-input w-full rounded-xl p-3 text-xs md:text-sm outline-none h-24 resize-none mb-3 leading-relaxed"></textarea>
+                <label class="block text-[10px] mb-1.5 opacity-70 uppercase tracking-widest font-semibold">Vote (Siapa yang...)</label>
+                <textarea id="edit-default-v" class="glass-input w-full rounded-xl p-3 text-xs md:text-sm outline-none h-24 resize-none leading-relaxed"></textarea>
+            </div>
 
-            const canvasRef = useRef(null);
-            const suggestionRef = useRef(null);
-            const inputRef = useRef(null);
+            <div class="glass p-5 md:p-6 rounded-[2rem] border-green-500/20">
+                <h3 class="text-base font-semibold text-green-300 mb-4 flex items-center gap-2 border-b border-green-500/20 pb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12a10 10 0 1 0 20 0 10 10 0 1 0-20 0ZM12 8v8M8 12h8"/></svg>
+                    Database Cloud AI (Dapat Diedit)
+                </h3>
+                <label class="block text-[10px] mb-1.5 opacity-80 uppercase tracking-widest font-semibold text-green-200">Deep Talk AI</label>
+                <textarea id="edit-ai-q" class="glass-input w-full border-green-500/30 rounded-xl p-3 text-xs md:text-sm outline-none h-24 resize-none mb-3 leading-relaxed"></textarea>
+                <label class="block text-[10px] mb-1.5 opacity-80 uppercase tracking-widest font-semibold text-green-200">Vote AI</label>
+                <textarea id="edit-ai-v" class="glass-input w-full border-green-500/30 rounded-xl p-3 text-xs md:text-sm outline-none h-24 resize-none leading-relaxed"></textarea>
+            </div>
+        </div>
 
-            const isTvSelected = selectedItem && (selectedItem.media_type === 'tv' || !selectedItem.title);
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        <button onclick="UI.saveCards(this)" class="mt-3 bg-white text-black w-full py-4 rounded-xl text-sm font-bold tracking-[0.15em] uppercase hover:bg-gray-200 active:scale-95 transition-all shrink-0 shadow-[0_0_20px_rgba(255,255,255,0.3)]">Simpan & Keluar</button>
+    </div>
 
-            useEffect(() => {
-                const checkInstalled = () => {
-                    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-                    setIsInstalled(!!isStandalone);
-                };
-                checkInstalled();
+    <!-- 3. LOCAL GAME ARENA -->
+    <div id="screen-local-game" class="screen hidden w-full max-w-5xl mx-auto flex flex-col items-center justify-between h-[100dvh] py-6 px-4 animate-fade relative z-10">
+        <div class="w-full flex justify-between items-center shrink-0 z-50 absolute top-4 px-4">
+            <button onclick="UI.switch('screen-main-menu')" class="bg-black/20 hover:bg-black/40 border border-white/10 p-2.5 rounded-full transition-all backdrop-blur-md">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <span class="text-[10px] md:text-xs font-bold opacity-80 tracking-[0.15em] uppercase bg-black/30 border border-white/10 px-3 py-1.5 rounded-full backdrop-blur-md shadow-lg" id="local-counter">0 / 0</span>
+        </div>
+        
+        <div class="flex-grow flex items-center justify-center w-full mt-4">
+            <div class="card-container">
+                <div id="local-card-inner" class="card-inner">
+                    <div id="local-card-front" class="card-face card-glass"><p id="local-text-front" class="transition-all"></p></div>
+                    <div id="local-card-back" class="card-face card-back card-glass"><p id="local-text-back" class="transition-all"></p></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-6 md:gap-10 shrink-0 mb-6 z-50">
+            <button onclick="Game.prevLocalCard()" class="glass-btn p-4 md:p-5 rounded-full shadow-2xl backdrop-blur-md border-white/30 hover:bg-white/20">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <button onclick="Game.nextLocalCard()" class="bg-white text-black hover:bg-gray-200 p-4 md:p-5 rounded-full shadow-[0_0_30px_rgba(255,255,255,0.4)] transition-all active:scale-95">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+        </div>
+    </div>
 
-                const handlePromptReady = () => {
-                    setInstallPrompt(window.deferredPrompt);
-                };
-                window.addEventListener('pwa-prompt-ready', handlePromptReady);
-                if (window.deferredPrompt) handlePromptReady();
-                return () => window.removeEventListener('pwa-prompt-ready', handlePromptReady);
-            }, []);
+    <!-- 4. PARTY MENU -->
+    <div id="screen-party-menu" class="screen hidden max-w-md mx-auto flex flex-col h-[100dvh] justify-center items-center text-center py-10 w-full animate-fade relative z-10 px-4">
+        <button onclick="UI.switch('screen-main-menu')" class="absolute top-4 left-4 bg-white/10 hover:bg-white/20 p-2.5 rounded-full transition-all border border-white/10 backdrop-blur-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <h2 class="text-3xl md:text-5xl font-bold mb-10 tracking-tight drop-shadow-lg">Party Pack</h2>
+        <div class="flex flex-col gap-4 w-full">
+            <button onclick="Multiplayer.createRoom()" class="glass-btn p-6 md:p-8 rounded-[2rem] flex flex-col items-center group">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mb-3 opacity-80 group-hover:scale-110 transition-transform"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                <h3 class="text-lg md:text-xl font-bold mb-1 tracking-wide">Host Game</h3>
+                <p class="text-xs md:text-sm opacity-60 font-light">Buat ruangan, tampilkan di layar besar</p>
+            </button>
+            <div class="relative flex items-center py-1">
+                <div class="flex-grow border-t border-white/20"></div>
+                <span class="flex-shrink-0 mx-4 text-white/50 text-[10px] font-bold uppercase tracking-widest">ATAU</span>
+                <div class="flex-grow border-t border-white/20"></div>
+            </div>
+            <button onclick="UI.switch('screen-guest-join')" class="glass-btn p-6 md:p-8 rounded-[2rem] flex flex-col items-center group">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mb-3 opacity-80 group-hover:scale-110 transition-transform"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>
+                <h3 class="text-lg md:text-xl font-bold mb-1 tracking-wide">Join Game</h3>
+                <p class="text-xs md:text-sm opacity-60 font-light">Masuk ruangan teman via kode</p>
+            </button>
+        </div>
+    </div>
 
-            useEffect(() => {
-                if (loading || !isFocused) {
-                    setShowSuggestions(false);
-                    return;
-                }
-
-                const timer = setTimeout(() => {
-                    if (query.trim().length > 2) {
-                        fetchSuggestions(query.trim());
-                    } else {
-                        setSuggestions([]);
-                        setShowSuggestions(false);
-                    }
-                }, 300);
-                return () => clearTimeout(timer);
-            }, [query, loading, isFocused]);
-
-            useEffect(() => {
-                const handleClickOutside = (e) => {
-                    if (suggestionRef.current && !suggestionRef.current.contains(e.target)) {
-                        setShowSuggestions(false);
-                    }
-                };
-                document.addEventListener("mousedown", handleClickOutside);
-                return () => document.removeEventListener("mousedown", handleClickOutside);
-            }, []);
-
-            useEffect(() => {
-                if (selectedItem && isTvSelected) {
-                    fetchTvData(selectedItem.id);
-                }
-            }, [selectedItem]);
-
-            useEffect(() => {
-                if (selectedItem && isTvSelected && season) {
-                    fetchSeasonData(selectedItem.id, season);
-                }
-            }, [selectedItem, season]);
-
-            const fetchSuggestions = async (q) => {
-                try {
-                    const res = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${apiKey}&query=${encodeURIComponent(q)}&language=en-US&page=1&include_adult=false`);
-                    const data = await res.json();
-                    const filtered = (data.results || [])
-                        .filter(i => (i.media_type === 'movie' || i.media_type === 'tv') && i.poster_path && i.adult === false)
-                        .filter(i => {
-                            const date = i.release_date || i.first_air_date;
-                            return date && date <= today;
-                        })
-                        .slice(0, 8); 
-                    
-                    if (!loading && isFocused) {
-                        setSuggestions(filtered);
-                        setShowSuggestions(filtered.length > 0);
-                    }
-                } catch (e) { console.error(e); }
-            };
-
-            const fetchTvData = async (id) => {
-                try {
-                    const res = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=${apiKey}&language=en-US`);
-                    const detailData = await res.json();
-                    setTvDetails(detailData);
-                    
-                    const airedSeasons = (detailData.seasons || [])
-                        .filter(s => s.season_number > 0 && s.air_date && s.air_date <= today);
-
-                    if (airedSeasons.length > 0) {
-                        const latest = airedSeasons.reduce((prev, curr) => (prev.season_number > curr.season_number ? prev : curr));
-                        setSeason(latest.season_number);
-                    } else {
-                        setSeason(detailData.seasons?.[0]?.season_number || 1);
-                    }
-                    setEpisode('none');
-                } catch (err) { console.error(err); }
-            };
-
-            const fetchSeasonData = async (tvId, seasonNum) => {
-                try {
-                    const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNum}?api_key=${apiKey}&language=en-US`);
-                    const data = await res.json();
-                    if (data.episodes) {
-                        // Filter episodes that have already aired
-                        const releasedEpisodes = data.episodes.filter(ep => ep.air_date && ep.air_date <= today);
-                        setAvailableEpisodes(releasedEpisodes.length);
-                        setEpisode('none');
-                    }
-                } catch (err) { console.error(err); }
-            };
-
-            const searchAll = async (e) => {
-                if (e) e.preventDefault();
-                if (!query || !apiKey) return;
+    <!-- 5. HOST LOBBY (DIOPTIMALKAN UNTUK PC) -->
+    <div id="screen-host-lobby" class="screen hidden w-full h-[100dvh] flex items-center justify-center animate-fade relative overflow-hidden z-10 px-4 md:px-12">
+        <button onclick="Multiplayer.endHostGame()" class="absolute top-4 left-4 bg-black/20 hover:bg-red-600/60 text-white p-2.5 rounded-full border border-white/20 transition-colors z-50 backdrop-blur-md">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+        <div id="floating-players" class="absolute inset-0 z-0 pointer-events-none"></div>
+        
+        <div class="glass p-8 md:p-12 lg:p-16 rounded-[2.5rem] md:rounded-[3rem] z-10 flex flex-col md:flex-row items-center justify-between w-full max-w-5xl shadow-2xl relative gap-8 md:gap-16">
+            <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-[2.5rem] md:rounded-[3rem] pointer-events-none"></div>
+            
+            <!-- Info Kiri (Kode & Tombol) -->
+            <div class="flex flex-col items-center md:items-start text-center md:text-left w-full md:w-1/2 z-10">
+                <h1 class="text-xs md:text-sm font-bold uppercase tracking-[0.25em] opacity-60 mb-2 md:mb-4">Kode Ruangan</h1>
+                <h2 id="host-room-code" class="text-6xl md:text-8xl lg:text-9xl font-black tracking-widest mb-8 drop-shadow-xl font-mono">---</h2>
                 
-                setShowSuggestions(false);
-                setSuggestions([]);
-                setIsFocused(false); 
-                
-                if (inputRef.current) {
-                    inputRef.current.blur(); 
-                }
-                
-                setLoading(true);
-                setError(null);
-                setHasSearched(false);
-                setHasEverSearched(true);
-                
-                try {
-                    const [movieRes, tvRes] = await Promise.all([
-                        fetch(`https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US&page=1&include_adult=false`),
-                        fetch(`https://api.themoviedb.org/3/search/tv?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US&page=1&include_adult=false`)
-                    ]);
-                    const movieData = await movieRes.json();
-                    const tvData = await tvRes.json();
-                    
-                    setMovies((movieData.results || [])
-                        .filter(i => i.poster_path && i.release_date && i.release_date <= today && i.adult === false)
-                        .map(item => ({...item, media_type: 'movie'}))
-                    );
-                    setSeries((tvData.results || [])
-                        .filter(i => i.poster_path && i.first_air_date && i.first_air_date <= today && i.adult === false)
-                        .map(item => ({...item, media_type: 'tv'}))
-                    );
-                } catch (err) { setError(err.message); }
-                finally { setLoading(false); setHasSearched(true); }
-            };
-
-            const resetHome = () => {
-                window.location.reload();
-            };
-
-            const handleInstall = async () => {
-                if (isIOS) {
-                    setShowIOSInstructions(true);
-                    return;
-                }
-                if (!installPrompt) {
-                    console.log("No install prompt available yet");
-                    return;
-                }
-                installPrompt.prompt();
-                const { outcome } = await installPrompt.userChoice;
-                if (outcome === 'accepted') setInstallPrompt(null);
-            };
-
-            const getSmartTitle = (ctx, text, maxWidth) => {
-                const upperTitle = text.toUpperCase();
-                const fontSize = 70;
-                ctx.font = `400 ${fontSize}px Oswald, sans-serif`;
-                
-                let lines = getBalancedLines(ctx, upperTitle, maxWidth);
-                
-                if (lines.length > 2) {
-                    if (upperTitle.includes(':') || upperTitle.includes(',')) {
-                        const firstPart = upperTitle.split(/[:|,]/)[0].trim();
-                        return getBalancedLines(ctx, firstPart, maxWidth).slice(0, 2);
-                    } else {
-                        const firstTwo = lines.slice(0, 2);
-                        let lastLine = firstTwo[1];
-                        while (ctx.measureText(lastLine + "...").width > maxWidth && lastLine.length > 0) {
-                            lastLine = lastLine.slice(0, -1);
-                        }
-                        firstTwo[1] = lastLine.trim() + "...";
-                        return firstTwo;
-                    }
-                }
-                return lines;
-            };
-
-            const generateStoryImage = async (item) => {
-                setGenerating(true);
-                const canvas = canvasRef.current;
-                const ctx = canvas.getContext('2d');
-                canvas.width = 1080; canvas.height = 1920;
-                const drawRoundedRect = (ctx, x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.closePath(); };
-
-                try {
-                    ctx.fillStyle = bgColor;
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    const isTv = item.media_type === 'tv' || !item.title;
-                    const posterToUse = customPoster || item.poster_path;
-
-                    const bgImg = new Image();
-                    bgImg.crossOrigin = "anonymous";
-                    bgImg.src = item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}?canvas=true` : `${TMDB_IMAGE_BASE}${posterToUse}?canvas=true`;
-                    await new Promise(r => { bgImg.onload = r; bgImg.onerror = r; });
-                    if (bgImg.complete) {
-                        ctx.save(); ctx.globalAlpha = 0.45; ctx.filter = 'blur(25px)';
-                        const scale = Math.max(canvas.width / bgImg.width, canvas.height / bgImg.height);
-                        const x = (canvas.width / 2) - (bgImg.width / 2) * scale;
-                        const y = (canvas.height / 2) - (bgImg.height / 2) * scale;
-                        ctx.drawImage(bgImg, x, y, bgImg.width * scale, bgImg.height * scale);
-                        ctx.restore();
-                    }
-
-                    const rgbColor = hexToRgb(bgColor);
-                    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-                    grad.addColorStop(0, `rgba(${rgbColor}, ${bgOpacity * 0.1})`);
-                    grad.addColorStop(1, `rgba(${rgbColor}, ${bgOpacity})`);
-                    ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                    const img = new Image();
-                    img.crossOrigin = "anonymous";
-                    img.src = `${TMDB_IMAGE_BASE}${posterToUse}?canvas=true`;
-                    await new Promise(r => { img.onload = r; img.onerror = r; });
-                    if (img.complete) {
-                        const pw = 640, ph = 960, px = (canvas.width - pw) / 2, py = 200;
-                        const radius = 45; 
-                        
-                        // Main Poster Body
-                        ctx.save(); 
-                        ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 70; ctx.shadowOffsetY = 30;
-                        drawRoundedRect(ctx, px, py, pw, ph, radius); 
-                        ctx.save(); ctx.clip(); ctx.drawImage(img, px, py, pw, ph); ctx.restore();
-                        
-                        // Add Poster Border matching metabox style
-                        ctx.lineWidth = 2;
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-                        ctx.stroke();
-                        ctx.restore();
-                    }
-
-                    ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
-                    
-                    const fontSize = 70;
-                    ctx.font = `400 ${fontSize}px Oswald, sans-serif`;
-                    const lines = getSmartTitle(ctx, (item.title || item.name), 750);
-                    
-                    const lineHeight = fontSize + 12;
-                    const totalHeight = lines.length * lineHeight;
-                    
-                    let currentY = 1355 - (totalHeight / 2); 
-                    if (lines.length > 1) {
-                        currentY += 35; // Shift down for multi-line titles as requested
-                    }
-                    
-                    ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 15; ctx.shadowOffsetY = 5;
-                    lines.forEach(l => { 
-                        ctx.fillText(l.trim(), canvas.width / 2, currentY); 
-                        currentY += lineHeight; 
-                    });
-                    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-
-                    if (isTv && showSeasonEpisode) {
-                        ctx.font = '500 24px Inter, sans-serif'; ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-                        const epText = episode === 'none' ? "" : ` E${episode.toString().padStart(2, '0')}`;
-                        ctx.fillText(`S${season.toString().padStart(2, '0')}${epText}`, canvas.width / 2, currentY - 35);
-                        currentY += 45; 
-                    } else { currentY += 35; }
-
-                    ctx.font = '500 34px Inter, sans-serif';
-                    const yearTxt = (item.release_date || item.first_air_date || 'N/A').split('-')[0];
-                    const ratingTxt = `★ ${item.vote_average.toFixed(1)}`;
-                    const typeTxt = isTv ? 'SERIES' : 'MOVIE';
-                    const yearW = ctx.measureText(yearTxt).width, ratingW = ctx.measureText(ratingTxt).width, typeW = ctx.measureText(typeTxt).width;
-                    const dotSpace = 44, totalTextW = yearW + ratingW + typeW + (dotSpace * 2);
-                    const boxW = totalTextW + 90, boxH = 72, boxX = (canvas.width - boxW) / 2, boxRadius = 36, boxY = currentY - 50;
-
-                    ctx.save(); drawRoundedRect(ctx, boxX, boxY, boxW, boxH, boxRadius); ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; ctx.fill();
-                    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; ctx.stroke(); ctx.restore();
-
-                    let detailX = boxX + 45; const textBaselineY = boxY + boxH / 2 + 2;
-                    ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-                    ctx.fillStyle = '#ffffff'; ctx.fillText(yearTxt, detailX, textBaselineY); detailX += yearW + dotSpace/2;
-                    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.beginPath(); ctx.arc(detailX, textBaselineY, 4.5, 0, Math.PI * 2); ctx.fill(); detailX += dotSpace/2;
-                    ctx.fillStyle = '#facc15'; ctx.fillText(ratingTxt, detailX, textBaselineY); detailX += ratingW + dotSpace/2;
-                    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.beginPath(); ctx.arc(detailX, textBaselineY, 4.5, 0, Math.PI * 2); ctx.fill(); detailX += dotSpace/2;
-                    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillText(typeTxt, detailX, textBaselineY); ctx.restore();
-
-                    if (personalRating > 0) {
-                        const starOuter = 16, starInner = 7.5, starGap = 12, starWidth = starOuter * 2, totalStarsWidth = (5 * starWidth) + (4 * starGap);
-                        let startX = (canvas.width - totalStarsWidth) / 2 + starOuter;
-                        const starY = boxY + boxH + 45;
-                        for (let i = 1; i <= 5; i++) {
-                            ctx.fillStyle = i <= personalRating ? '#facc15' : 'rgba(255, 255, 255, 0.25)';
-                            drawStarPath(ctx, startX, starY, 5, starOuter, starInner); startX += starWidth + starGap;
-                        }
-                    }
-
-                    const attrImg = new Image(); attrImg.crossOrigin = "anonymous";
-                    attrImg.src = STORY_LOGO_URL;
-                    await new Promise(r => { attrImg.onload = r; attrImg.onerror = r; });
-                    if (attrImg.complete) {
-                        const aWidth = 280, aHeight = (attrImg.height / attrImg.width) * aWidth;
-                        ctx.save(); ctx.globalAlpha = 0.2; 
-                        ctx.drawImage(attrImg, (canvas.width - aWidth) / 2, 1780 - (aHeight / 2), aWidth, aHeight); ctx.restore();
-                    }
-
-                    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.95));
-                    setGenerating(false); return blob;
-                } catch (e) { console.error(e); setGenerating(false); }
-            };
-
-            const drawStarPath = (ctx, cx, cy, spikes, outerRadius, innerRadius) => {
-                let rot = Math.PI / 2 * 3, x = cx, y = cy, step = Math.PI / spikes;
-                ctx.beginPath(); ctx.moveTo(cx, cy - outerRadius);
-                for (let i = 0; i < spikes; i++) {
-                    x = cx + Math.cos(rot) * outerRadius; y = cy + Math.sin(rot) * outerRadius; ctx.lineTo(x, y); rot += step;
-                    x = cx + Math.cos(rot) * innerRadius; y = cy + Math.sin(rot) * innerRadius; ctx.lineTo(x, y); rot += step;
-                }
-                ctx.lineTo(cx, cy - outerRadius); ctx.closePath(); ctx.fill();
-            };
-
-            const getBalancedLines = (ctx, text, maxWidth) => {
-                const words = text.split(' '), lines = []; let line = '';
-                for (let n = 0; n < words.length; n++) {
-                    let test = line + words[n] + ' ';
-                    if (ctx.measureText(test).width > maxWidth && n > 0) { lines.push(line.trim()); line = words[n] + ' '; }
-                    else { line = test; }
-                }
-                lines.push(line.trim());
-                return lines;
-            };
-
-            const handleShare = async (item) => {
-                const blob = await generateStoryImage(item);
-                if (!blob) return;
-                const file = new File([blob], `watchshare-${item.id}.jpg`, { type: 'image/jpeg' });
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    try { await navigator.share({ files: [file], title: item.title || item.name }); }
-                    catch (err) { downloadImage(blob, item.title || item.name); }
-                } else { downloadImage(blob, item.title || item.name); }
-            };
-
-            const downloadImage = (blob, title) => {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url; a.download = `watchshare-${title.toLowerCase().replace(/\s+/g, '-')}.jpg`; a.click();
-                URL.revokeObjectURL(url);
-            };
-
-            const PosterItem = ({ item }) => (
-                <div onClick={() => setSelectedItem(item)} className="group relative aspect-[2/3] bg-neutral-900 rounded-2xl overflow-hidden cursor-pointer border border-white/5 hover:border-white/20 transition-all transform active:scale-95">
-                    <img src={`${TMDB_IMAGE_BASE}${item.poster_path}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
-                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-black border border-white/10 uppercase z-10">
-                        {item.media_type === 'tv' ? <div className="flex items-center gap-1"><Icon name="tv" size={10} /> TV</div> : <div className="flex items-center gap-1"><Icon name="film" size={10} /> MOVIE</div>}
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent p-4 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                        <p className="text-xs font-oswald font-light leading-tight uppercase">{item.title || item.name}</p>
-                        <p className="text-[10px] text-yellow-500 mt-1 font-inter">★ {item.vote_average?.toFixed(1) || '0.0'}</p>
+                <div class="flex flex-col w-full gap-3 max-w-xs">
+                    <button onclick="Multiplayer.shareRoom()" class="glass-btn px-5 py-3.5 md:py-4 rounded-xl text-xs md:text-sm uppercase tracking-[0.15em] font-bold flex items-center justify-center gap-2 w-full transition-all hover:scale-105 active:scale-95 shadow-lg border-white/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+                        Bagikan Link
+                    </button>
+                    <div class="flex items-center justify-center gap-2 bg-black/40 px-5 py-3.5 md:py-4 rounded-xl border border-white/10 backdrop-blur-md shadow-inner">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="opacity-70"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        <span class="text-sm md:text-base font-semibold tracking-wide"><span id="host-player-count" class="font-bold text-green-400">0</span> Terhubung</span>
                     </div>
                 </div>
-            );
+                <p class="text-[9px] md:text-[10px] mt-4 opacity-50 uppercase tracking-widest">(Klik pemain terbang untuk *kick*)</p>
+            </div>
 
-            const availablePosters = [];
-            if (selectedItem) {
-                if (selectedItem.poster_path) availablePosters.push({ id: 'main', path: selectedItem.poster_path, label: 'Main Poster' });
-                if (isTvSelected && tvDetails.seasons) {
-                    tvDetails.seasons.forEach(s => {
-                        // Only include posters from seasons that have aired
-                        if (s.poster_path && s.season_number > 0 && s.air_date && s.air_date <= today && !availablePosters.find(p => p.path === s.poster_path)) {
-                            availablePosters.push({ id: `s${s.season_number}`, path: s.poster_path, label: `Season ${s.season_number}` });
-                        }
-                    });
+            <!-- QR Kanan (Lebih Besar) -->
+            <div class="w-full md:w-1/2 flex justify-center md:justify-end z-10">
+                <div id="qrcode" class="flex justify-center w-full max-w-[280px] md:max-w-[380px] drop-shadow-2xl hover:scale-105 transition-transform duration-500"></div>
+            </div>
+        </div>
+
+        <button id="btn-start-host" onclick="Multiplayer.startHostGame()" class="fixed bottom-6 right-6 md:bottom-12 md:right-12 w-14 h-14 md:w-20 md:h-20 bg-white text-black rounded-full flex items-center justify-center opacity-50 pointer-events-none transition-all duration-300 z-50 hover:scale-110 active:scale-95 shadow-[0_10px_30px_rgba(255,255,255,0.3)]">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="ml-1 md:w-8 md:h-8"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </button>
+    </div>
+
+    <!-- 6. HOST ARENA -->
+    <div id="screen-host-arena" class="screen hidden w-full max-w-5xl mx-auto flex flex-col items-center justify-between h-[100dvh] py-6 px-4 animate-fade relative z-10">
+        <div class="w-full flex justify-between items-center absolute top-4 px-4 z-50">
+            <div class="flex gap-3 items-center">
+                <button onclick="Multiplayer.endHostGame()" class="bg-black/20 hover:bg-red-600/60 text-white p-2.5 rounded-full border border-white/20 transition-colors backdrop-blur-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+                <button onclick="Multiplayer.hostPrevPhase()" class="bg-black/20 hover:bg-white/20 text-white p-2.5 rounded-full border border-white/20 transition-colors backdrop-blur-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+                </button>
+            </div>
+            
+            <!-- Tambahan Kode Ruangan di Arena -->
+            <div class="absolute left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none">
+                <span class="text-[8px] md:text-[10px] uppercase tracking-widest opacity-60 font-bold mb-0.5">Kode Ruangan</span>
+                <span id="host-arena-room-code" class="text-xl md:text-2xl font-black font-mono tracking-widest drop-shadow-md">---</span>
+            </div>
+
+            <span class="text-[10px] md:text-xs font-bold opacity-80 tracking-[0.15em] uppercase bg-black/30 px-3 py-1.5 rounded-full backdrop-blur-md border border-white/10" id="host-arena-counter">0 Kartu</span>
+        </div>
+        
+        <div class="flex-grow flex flex-col items-center justify-center w-full mt-6">
+            <div id="host-voting-timer" class="hidden mb-4 md:mb-6 bg-yellow-500/20 px-5 py-2.5 rounded-full border border-yellow-500/50 backdrop-blur-md flex items-center gap-2 shadow-[0_0_20px_rgba(234,179,8,0.2)]">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-yellow-400"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span class="text-sm md:text-lg font-bold text-yellow-300 tracking-wider">Vote: <span id="timer-val">30</span>s <span class="opacity-50 mx-1 md:mx-2">|</span> <span id="host-vote-count">0/0</span> Masuk</span>
+            </div>
+            <div class="card-container">
+                <div id="host-arena-inner" class="card-inner">
+                    <div id="host-arena-front" class="card-face card-glass"><p id="host-text-front" class="transition-all"></p></div>
+                    <div id="host-arena-back" class="card-face card-back card-glass"><p id="host-text-back" class="transition-all"></p></div>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="Multiplayer.hostNextPhase()" id="btn-next-host" class="bg-white text-black hover:bg-gray-200 px-8 py-4 rounded-full flex items-center gap-2 mb-4 md:mb-8 shadow-[0_0_30px_rgba(255,255,255,0.3)] z-50 transition-transform active:scale-95">
+            <span class="font-bold text-xs md:text-sm tracking-[0.2em] uppercase" id="host-next-label">Lanjut</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+    </div>
+
+    <!-- 7. GUEST JOIN -->
+    <div id="screen-guest-join" class="screen hidden w-full max-w-md mx-auto flex flex-col justify-center h-[100dvh] animate-fade px-4 relative z-10">
+        <button onclick="UI.openPartyMenu()" class="absolute top-4 left-4 bg-white/10 hover:bg-white/20 p-2.5 rounded-full transition-all border border-white/10 backdrop-blur-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <div class="glass p-6 md:p-10 rounded-[2.5rem] space-y-6 shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none"></div>
+            <h2 class="text-xl md:text-2xl font-bold uppercase tracking-[0.2em] text-center drop-shadow-md">Masuk Room</h2>
+            <div class="space-y-4">
+                <input type="text" id="guest-code" placeholder="KODE RUANGAN" class="glass-input w-full p-4 rounded-xl text-center text-lg md:text-xl font-bold uppercase tracking-widest placeholder-white/40" autocomplete="off">
+                <input type="text" id="guest-name" placeholder="Nama Panggilan" class="glass-input w-full p-4 rounded-xl text-center text-base md:text-lg font-semibold placeholder-white/40" maxlength="10" oninput="UI.formatName(this)" autocomplete="off">
+            </div>
+            <button onclick="Multiplayer.submitGuestJoin()" class="w-full py-4 bg-white hover:bg-gray-200 text-black font-bold tracking-[0.15em] uppercase rounded-xl text-xs md:text-sm transition-all active:scale-95 shadow-[0_5px_20px_rgba(255,255,255,0.2)] mt-2">Gabung Sekarang</button>
+        </div>
+    </div>
+
+    <!-- 8. GUEST WAIT -->
+    <div id="screen-guest-wait" class="screen hidden w-full max-w-md mx-auto flex flex-col justify-center items-center h-[100dvh] animate-fade text-center px-4 relative z-10">
+        <button onclick="Multiplayer.leaveGuestRoom()" class="absolute top-4 left-4 bg-black/20 hover:bg-black/40 p-2.5 rounded-full transition-all border border-white/10 backdrop-blur-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        
+        <span class="loader mb-8"></span>
+        
+        <h2 class="text-3xl font-bold mb-2 drop-shadow-md">Berhasil!</h2>
+        <p class="opacity-70 text-sm tracking-wide font-light">Menunggu Host memulai...</p>
+        
+        <div class="mt-12 py-2.5 px-6 bg-white/10 rounded-full border border-white/20 backdrop-blur-md shadow-lg">
+            <p class="text-[10px] md:text-xs font-bold uppercase tracking-[0.25em] opacity-90" id="wait-guest-name">GUEST</p>
+        </div>
+    </div>
+
+    <!-- 9. GUEST ARENA -->
+    <div id="screen-guest-arena" class="screen hidden w-full mx-auto flex flex-col justify-between h-[100dvh] animate-fade relative pt-[env(safe-area-inset-top,2rem)] pb-[env(safe-area-inset-bottom,2rem)] px-4 z-10">
+        <button id="btn-guest-leave" onclick="Multiplayer.leaveGuestRoom()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg> Keluar
+        </button>
+
+        <button onclick="UI.toggleFullscreen()" class="absolute top-4 right-4 bg-black/10 hover:bg-black/30 p-2.5 rounded-full z-50 transition-all border border-white/10 backdrop-blur-md">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        </button>
+        
+        <div id="guest-status-view" class="flex flex-col items-center justify-center h-full w-full text-center"></div>
+        
+        <div id="guest-vote-view" class="hidden flex-col h-full w-full pt-6 pb-2">
+            <h3 class="text-center font-bold tracking-[0.2em] uppercase opacity-90 mb-6 text-xs md:text-sm flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 12 2 2 4-4"/><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                Pilih Pemain
+            </h3>
+            <div id="guest-vote-list" class="grid grid-cols-2 gap-3 custom-scroll flex-grow content-start w-full max-w-md mx-auto px-1"></div>
+        </div>
+    </div>
+
+    <!-- Main Logic -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, arrayUnion, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
+
+        // --- 0. DATA & SFX ---
+        window.AppData = {
+            defaultQuestions: [
+                "Apa memori masa kecil yang masih terekam sangat jelas di ingatanmu?", "Kapan terakhir kali kamu merasa sangat bangga pada dirimu?", "Apa definisi rumah dan tempat aman menurutmu?", "Jika bisa mengubah satu keputusan di masa lalumu, apa itu?", "Hal kecil apa yang akhir-akhir ini berhasil membuatmu tersenyum?", "Siapa orang yang paling memberikan pengaruh besar dalam hidupmu?", "Apa ketakutan terbesarmu tentang masa depan?", "Pelajaran berharga apa dari kegagalan terbesarmu?", "Mimpi apa yang belum pernah kamu ceritakan ke orang lain?", "Kapan terakhir kali menangis, dan apa alasannya?", "Bagaimana caramu menunjukkan kasih sayang?", "Sifat apa dari dirimu yang paling ingin diubah?", "Hal apa yang membuatmu merasa tidak aman (insecure)?", "Bagaimana memaafkan diri sendiri setelah berbuat salah?", "Kunci utama hubungan bertahan lama menurutmu?", "Hal apa yang membuatmu merasa hidup?", "Jika besok hari terakhirmu, apa yang ingin dilakukan hari ini?", "Pernah merasa kesepian di keramaian?", "Ekspektasi orang lain apa yang membebanimu?", "Hal apa yang sering membuatmu overthinking di malam hari?"
+            ],
+            defaultVotes: [
+                "Siapa yang paling mungkin jadi miliarder duluan?", "Siapa yang paling mungkin diam-diam menikah?", "Siapa yang paling mungkin selamat di hutan?", "Siapa yang paling mungkin masuk penjara karena alasan konyol?", "Siapa yang paling mungkin menghilang tanpa kabar?", "Siapa yang paling gampang jatuh cinta?", "Siapa yang paling mungkin balikan dengan mantan?", "Siapa yang paling sering membatalkan janji?", "Siapa yang paling sering overthinking?", "Siapa yang gampang tertidur di tempat umum?"
+            ],
+            aiQuestions: [], aiVotes: [], wildcardText: "Lebih baik diam atau buat satu pertanyaan bebas untuk pemain lain."
+        };
+
+        const sanitizeList = (list) => {
+            if (!Array.isArray(list)) return [];
+            return list.map(item => {
+                if (typeof item === 'object' && item !== null) return item.text || item.question || item.pertanyaan || Object.values(item)[0] || "";
+                return String(item);
+            }).filter(item => item && typeof item === 'string' && !item.includes('[object Object]'));
+        };
+
+        const loadLocalData = () => {
+            const saved = localStorage.getItem('bincang_saved_cards');
+            if(saved) {
+                const p = JSON.parse(saved);
+                window.AppData.defaultQuestions = p.defQ || window.AppData.defaultQuestions;
+                window.AppData.defaultVotes = p.defV || window.AppData.defaultVotes;
+                window.AppData.aiQuestions = sanitizeList(p.aiQ || []);
+                window.AppData.aiVotes = sanitizeList(p.aiV || []);
+            }
+        }; loadLocalData();
+
+        const saveLocalData = () => {
+            localStorage.setItem('bincang_saved_cards', JSON.stringify({
+                defQ: window.AppData.defaultQuestions, defV: window.AppData.defaultVotes,
+                aiQ: window.AppData.aiQuestions, aiV: window.AppData.aiVotes
+            }));
+        };
+
+        const SFX = {
+            ctx: null,
+            init: () => { if(!SFX.ctx && window.AudioContext) SFX.ctx = new AudioContext(); },
+            play: (type) => {
+                if(!SFX.ctx) return;
+                if(SFX.ctx.state === 'suspended') SFX.ctx.resume();
+                const osc = SFX.ctx.createOscillator();
+                const gain = SFX.ctx.createGain();
+                osc.connect(gain); gain.connect(SFX.ctx.destination);
+                
+                if(type === 'flip') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(300, SFX.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(50, SFX.ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.3, SFX.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, SFX.ctx.currentTime + 0.1);
+                    osc.start(SFX.ctx.currentTime); osc.stop(SFX.ctx.currentTime + 0.1);
+                } else if (type === 'tick') {
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(800, SFX.ctx.currentTime);
+                    gain.gain.setValueAtTime(0.1, SFX.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, SFX.ctx.currentTime + 0.05);
+                    osc.start(SFX.ctx.currentTime); osc.stop(SFX.ctx.currentTime + 0.05);
+                } else if (type === 'cheer') {
+                    osc.type = 'square'; osc.frequency.setValueAtTime(400, SFX.ctx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(800, SFX.ctx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.1, SFX.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0, SFX.ctx.currentTime + 0.4);
+                    osc.start(SFX.ctx.currentTime); osc.stop(SFX.ctx.currentTime + 0.4);
                 }
             }
+        }; window.SFX = SFX;
 
-            const activePoster = customPoster || selectedItem?.poster_path || '';
-            const canChangePoster = availablePosters.length > 1;
-            const backdropUrl = selectedItem?.backdrop_path 
-                ? `https://image.tmdb.org/t/p/w1280${selectedItem.backdrop_path}` 
-                : `${TMDB_IMAGE_BASE}${activePoster}`;
+        // --- INIT BACKGROUND FLYING CHATBOXES ---
+        const initChatBg = () => {
+            const container = document.getElementById('chat-bg-container');
+            const icons = [
+                '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+                '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+                '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2v5Z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/></svg>'
+            ];
+            for(let i=0; i<15; i++) {
+                const el = document.createElement('div');
+                el.className = 'flying-chat';
+                el.innerHTML = icons[Math.floor(Math.random() * icons.length)];
+                
+                // Randomize properties
+                const size = 30 + Math.random() * 80;
+                el.style.width = `${size}px`;
+                el.style.height = `${size}px`;
+                el.style.left = `${Math.random() * 100}vw`;
+                el.style.animationDuration = `${15 + Math.random() * 25}s`;
+                el.style.animationDelay = `${Math.random() * 10}s`;
+                
+                container.appendChild(el);
+            }
+        };
+        // Wait for DOM to load, then create the chatboxes
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initChatBg);
+        } else {
+            initChatBg();
+        }
 
-            const getPreviewLines = () => {
-                if (!selectedItem) return [];
-                const tempCanvas = document.createElement('canvas');
-                const tempCtx = tempCanvas.getContext('2d');
-                return getSmartTitle(tempCtx, (selectedItem.title || selectedItem.name), 750);
-            };
+        // --- 1. CONFIG & SETUP ---
+        const firebaseConfig = { apiKey: "AIzaSyAQBUkqLA4TaPRjmPWH3Ngez7rmUryqvqg", authDomain: "bincang-kenal.firebaseapp.com", projectId: "bincang-kenal", storageBucket: "bincang-kenal.firebasestorage.app", messagingSenderId: "949797039719", appId: "1:949797039719:web:e6ad4a982b0fdb53eeeec2" };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        // Referensi Database Cloud
+        const getRoomsRef = () => collection(db, 'artifacts', 'bincang-kenal', 'public', 'data', 'rooms');
+        const getGlobalPoolRef = () => doc(db, 'artifacts', 'bincang-kenal', 'public', 'data', 'global_pool', 'ai_cards');
 
-            const previewLines = getPreviewLines();
-            const previewTitleFontSize = '6.48cqw'; 
-
-            return (
-                <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black flex flex-col font-inter relative">
-                    <header className="sticky top-0 z-30 bg-black/90 backdrop-blur-xl px-6 py-5 flex items-center justify-between border-b border-white/10">
-                        <div className="flex items-center h-10 sm:h-12 cursor-pointer hover:opacity-80 transition-opacity" onClick={resetHome}>
-                            <img src="header.png" alt="WatchShare" className="h-6 sm:h-8 w-auto object-contain" />
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <a href="https://saweria.co/mchammadr" target="_blank" className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-yellow-600/10 hover:bg-yellow-600/20 text-yellow-500 rounded-full border border-yellow-500/20 transition-all text-[10px] sm:text-xs font-bold">
-                                <Icon name="heart" size={14} className="fill-yellow-500" /> <span>Saweria</span>
-                            </a>
-                            <a href="https://ko-fi.com/mchammadr_" target="_blank" className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-pink-600/10 hover:bg-pink-600/20 text-pink-400 rounded-full border border-pink-500/20 transition-all text-[10px] sm:text-xs font-bold">
-                                <Icon name="heart" size={14} className="fill-pink-400" /> <span>Ko-fi</span>
-                            </a>
-                        </div>
-                    </header>
-
-                    <main className="max-w-4xl mx-auto p-6 flex-grow w-full pb-12">
-                        <div className="relative mb-12 mt-2" ref={suggestionRef}>
-                            <form onSubmit={searchAll}>
-                                <input 
-                                    ref={inputRef}
-                                    type="text" 
-                                    placeholder="Search movies or tv series..." 
-                                    value={query} 
-                                    onFocus={() => { 
-                                        setIsFocused(true);
-                                        setInstallButtonPermanentlyHidden(true);
-                                    }}
-                                    onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-                                    onChange={(e) => setQuery(e.target.value)} 
-                                    autoComplete="off"
-                                    className="w-full bg-neutral-900/50 border border-white/10 rounded-3xl py-5 pl-14 pr-6 focus:ring-2 focus:ring-white outline-none text-lg transition-all shadow-2xl font-inter" 
-                                />
-                                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-400"><Icon name="search" size={22} /></div>
-                            </form>
-
-                            {showSuggestions && (
-                                <div className="absolute top-full left-0 right-0 mt-2 bg-neutral-900/95 backdrop-blur-3xl border border-white/10 rounded-3xl overflow-hidden z-40 shadow-2xl animate-slide-up">
-                                    {suggestions.map(item => (
-                                        <div key={item.id} onClick={() => { setSelectedItem(item); setShowSuggestions(false); setIsFocused(false); if (inputRef.current) inputRef.current.blur(); }} className="px-6 py-3.5 hover:bg-white/5 cursor-pointer flex flex-row items-center gap-2 border-b border-white/5 last:border-0 overflow-hidden">
-                                            <span className="text-sm font-semibold font-inter tracking-tight truncate flex-1 uppercase">{item.title || item.name}</span>
-                                            <span className="text-[10px] text-neutral-400 font-inter shrink-0 uppercase tracking-tighter">{(item.release_date || item.first_air_date || 'N/A').split('-')[0]} • {item.media_type}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {loading ? (
-                            <div className="flex flex-col items-center justify-center py-24 gap-4">
-                                <div className="w-12 h-12 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                <p className="text-neutral-500 text-sm font-medium uppercase tracking-widest font-inter">Fetching data...</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-16 pb-12">
-                                {movies.length > 0 && (
-                                    <section>
-                                        <div className="flex justify-between items-end mb-6">
-                                            <h2 className="text-2xl font-oswald font-light uppercase tracking-wide">Movies</h2>
-                                            {movies.length > 4 && <button onClick={() => setShowAllMovies(!showAllMovies)} className="text-xs font-inter font-bold text-neutral-400 hover:text-white uppercase tracking-wider transition-colors pb-1">{showAllMovies ? 'Show Less' : 'Show All'}</button>}
-                                        </div>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                            {(showAllMovies ? movies : movies.slice(0, 4)).map(item => <PosterItem key={`movie-${item.id}`} item={item} />)}
-                                        </div>
-                                    </section>
-                                )}
-                                {series.length > 0 && (
-                                    <section>
-                                        <div className="flex justify-between items-end mb-6">
-                                            <h2 className="text-2xl font-oswald font-light uppercase tracking-wide">TV Series</h2>
-                                            {series.length > 4 && <button onClick={() => setShowAllSeries(!showAllSeries)} className="text-xs font-inter font-bold text-neutral-400 hover:text-white uppercase tracking-wider transition-colors pb-1">{showAllSeries ? 'Show Less' : 'Show All'}</button>}
-                                        </div>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                            {(showAllSeries ? series : series.slice(0, 4)).map(item => <PosterItem key={`tv-${item.id}`} item={item} />)}
-                                        </div>
-                                    </section>
-                                )}
-                            </div>
-                        )}
-                    </main>
-
-                    <footer className="py-12 px-6 flex flex-col items-center gap-4 border-t border-white/5 pb-24">
-                        <img 
-                            src="attribution.svg" 
-                            alt="Attribution" 
-                            onClick={() => setLogoTapped(!logoTapped)}
-                            className={`w-48 h-auto object-contain cursor-pointer transition-all duration-300 ${
-                                logoTapped ? 'opacity-100' : 'brightness-0 invert opacity-25'
-                            }`} 
-                        />
-                        <p className="text-[10px] uppercase font-normal tracking-widest text-center text-white/30 max-w-xs leading-relaxed">
-                            This product uses the TMDB API but is not endorsed or certified by TMDB.
-                        </p>
-                    </footer>
-
-                    {!isInstalled && !installButtonPermanentlyHidden && (
-                        <div className="fixed inset-0 z-40 flex items-center justify-center px-6 pointer-events-none">
-                            <button 
-                                onClick={handleInstall}
-                                className="w-fit px-6 bg-white text-black py-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-[0_30px_60px_rgba(255,255,255,0.25)] active:scale-95 transition-all text-sm uppercase tracking-widest border border-black/5 pointer-events-auto animate-slide-up"
-                            >
-                                <Icon name="download" size={20} />
-                                <span>Install Application</span>
-                            </button>
-                        </div>
-                    )}
-
-                    {showIOSInstructions && (
-                        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-4">
-                            <div className="w-full max-w-sm bg-neutral-900 border border-white/10 rounded-3xl p-8 animate-slide-up shadow-2xl relative">
-                                <button onClick={() => setShowIOSInstructions(false)} className="absolute top-4 right-4 text-white/40 hover:text-white"><Icon name="x" size={24} /></button>
-                                <div className="flex flex-col items-center text-center gap-6 pt-4">
-                                    <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 mb-2">
-                                        <img src="Icon.png" className="w-10 h-10 rounded-lg" alt="App Icon" />
-                                    </div>
-                                    <h3 className="text-xl font-bold tracking-tight">Install WatchShare</h3>
-                                    <p className="text-white/60 text-sm leading-relaxed">To install this app on your iPhone, please follow these simple steps:</p>
-                                    
-                                    <div className="w-full space-y-4 text-left mt-2">
-                                        <div className="flex items-center gap-4 bg-white/5 p-4 rounded-xl border border-white/5">
-                                            <div className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0">1</div>
-                                            <div className="flex items-center gap-2 text-sm font-medium">
-                                                Tap the <Icon name="iosShare" size={18} className="text-blue-400" /> Share icon
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-4 bg-white/5 p-4 rounded-xl border border-white/5">
-                                            <div className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0">2</div>
-                                            <div className="text-sm font-medium">Select "Add to Home Screen"</div>
-                                        </div>
-                                        <div className="flex items-center gap-4 bg-white/5 p-4 rounded-xl border border-white/5">
-                                            <div className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0">3</div>
-                                            <div className="text-sm font-medium">Tap "Add" in the top-right</div>
-                                        </div>
-                                    </div>
-
-                                    <button 
-                                        onClick={() => setShowIOSInstructions(false)}
-                                        className="mt-4 w-full py-4 bg-white/10 hover:bg-white/20 rounded-xl font-bold text-sm transition-colors"
-                                    >
-                                        Got it!
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {selectedItem && (
-                        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-lg flex flex-col items-center justify-start p-4 overflow-y-auto">
-                            <div className="absolute top-6 inset-x-6 flex justify-between items-center z-50">
-                                <span className="text-white/30 font-inter font-semibold tracking-widest uppercase text-sm pl-2 pointer-events-none">Preview</span>
-                                <button onClick={() => {setSelectedItem(null); setSeason(1); setEpisode('none'); setTvDetails({ seasons: [] }); setCustomPoster(null); setShowPosterPicker(false); setPersonalRating(0);}} className="p-2 text-white/60 hover:text-white transition-all"><Icon name="x" size={30} /></button>
-                            </div>
-                            
-                            <div className="w-full max-w-[440px] flex flex-col gap-6 pt-16 pb-12 animate-slide-up origin-top">
-                                <div className="relative aspect-[9/16] w-full rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-neutral-950 story-container" style={{ backgroundColor: bgColor }}>
-                                    <div className="absolute inset-0 z-0 pointer-events-none transition-opacity opacity-[0.45]">
-                                        <img src={backdropUrl} className="absolute inset-0 w-full h-full object-cover scale-[1.25] blur-[12px]" />
-                                    </div>
-                                    <div className="absolute inset-0 z-[1] pointer-events-none" style={{ background: `linear-gradient(to bottom, rgba(${hexToRgb(bgColor)}, ${bgOpacity * 0.1}), rgba(${hexToRgb(bgColor)}, ${bgOpacity}))` }}></div>
-                                    
-                                    <div className="absolute inset-0 flex flex-col items-center z-[2]">
-                                        <div className="absolute top-[10.41%] w-[59.25%] aspect-[2/3] shrink-0">
-                                            <div className="w-full h-full overflow-hidden border border-white/15 shadow-2xl" style={{ borderRadius: '4.17cqw' }}>
-                                                <img src={`${TMDB_IMAGE_BASE}${activePoster}`} className="w-full h-full object-cover transition-all" />
-                                            </div>
-                                            
-                                            {canChangePoster && (
-                                                <div className="absolute top-6 right-0 translate-x-1/2 z-30 flex flex-col items-end">
-                                                    <button onClick={() => setShowPosterPicker(!showPosterPicker)} className={`w-9 h-9 rounded-full grid place-items-center transition-all shadow-xl border ${showPosterPicker ? 'bg-yellow-400 border-yellow-300 text-black scale-105' : 'text-white bg-black/60 backdrop-blur-md border-white/20 hover:bg-black/80'}`}><Icon name="settings" size={18} /></button>
-                                                    {showPosterPicker && (
-                                                        <div className="absolute top-12 right-0 w-44 bg-neutral-900/95 backdrop-blur-3xl border border-white/15 rounded-3xl p-3 shadow-2xl animate-slide-up flex flex-col origin-top-right z-[60]">
-                                                            <div className="poster-picker-scroll flex flex-col gap-4 p-1">
-                                                                {availablePosters.map(p => (
-                                                                    <div key={p.id} onClick={() => { setCustomPoster(p.path); setShowPosterPicker(false); }} className={`relative w-full aspect-[2/3] rounded-2xl overflow-hidden cursor-pointer transition-all shadow-lg border-2 shrink-0 ${activePoster === p.path ? 'border-yellow-400 scale-[1.03]' : 'border-white/10 opacity-60 hover:opacity-100'}`}>
-                                                                        <img src={`${TMDB_IMAGE_BASE}${p.path}`} className="w-full h-full object-cover" />
-                                                                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/80 to-transparent pt-6 pb-2 px-1 text-center pointer-events-none">
-                                                                            <span className="text-[10px] font-black text-white uppercase tracking-widest leading-tight drop-shadow-md">{p.label}</span>
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                        
-                                        {/* PREVIEW UI MATCHING RENDER - REFINED GAPS */}
-                                        <div className="absolute top-[68.5%] w-full flex flex-col items-center">
-                                            {/* Container Title yang Ter-pusat */}
-                                            <div className="flex flex-col items-center text-center max-w-[85%] -translate-y-1/2">
-                                                {previewLines.map((line, idx) => (
-                                                    <h3 key={idx} className="font-normal uppercase text-white font-oswald drop-shadow-md leading-tight" style={{ fontSize: previewTitleFontSize }}>
-                                                        {line}
-                                                    </h3>
-                                                ))}
-                                                
-                                                {/* TV Detail dipindahkan ke sini: Pas di bawah Title */}
-                                                {isTvSelected && showSeasonEpisode && (
-                                                    <p className="font-medium text-white/50 font-inter tracking-[0.2em] uppercase mt-[1.5cqw]" style={{ fontSize: '2.22cqw' }}>
-                                                        S{season.toString().padStart(2, '0')}{episode === 'none' ? "" : ` E${episode.toString().padStart(2, '0')}`}
-                                                    </p>
-                                                )}
-                                            </div>
-                                            
-                                            {/* Metabox dengan jarak yang lebih besar dari Title/TV Details */}
-                                            <div className="flex flex-col items-center w-full mt-[1cqh]">
-                                                <div className="inline-flex items-center justify-center bg-white/10 backdrop-blur-md rounded-full font-inter border border-white/15 px-[4%] py-[1.8%]" style={{ height: '3.75cqh' }}>
-                                                    <div className="flex items-center gap-3 font-medium whitespace-nowrap" style={{ fontSize: '3.14cqw' }}>
-                                                        <span>{(selectedItem.release_date || selectedItem.first_air_date || '').split('-')[0]}</span>
-                                                        <span className="w-1 h-1 bg-white/40 rounded-full"></span>
-                                                        <span className="text-yellow-400 font-bold">★ {selectedItem.vote_average?.toFixed(1) || '0.0'}</span>
-                                                        <span className="w-1 h-1 bg-white/40 rounded-full"></span>
-                                                        <span className="text-white/60 uppercase tracking-tight">{isTvSelected ? 'SERIES' : 'MOVIE'}</span>
-                                                    </div>
-                                                </div>
-
-                                                {personalRating > 0 && (
-                                                    <div className="flex items-center gap-2 mt-[2.5cqh] animate-slide-up">
-                                                        {[1, 2, 3, 4, 5].map(star => <Icon key={star} name="star" size={16} className={star <= personalRating ? "text-yellow-400 fill-yellow-400" : "text-white/30 fill-white/30"} />)}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col gap-3 w-full">
-                                    {isTvSelected && (
-                                        <div className="flex flex-col gap-3 bg-white/5 backdrop-blur-xl px-6 py-4 rounded-[2rem] border border-white/10 shadow-xl">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2"><Icon name="tv" size={16} className="text-neutral-400" /><span className="text-xs font-bold text-neutral-300 uppercase tracking-wide">TV Details</span></div>
-                                                <label className="relative inline-flex items-center cursor-pointer">
-                                                    <input type="checkbox" className="sr-only peer" checked={showSeasonEpisode} onChange={() => setShowSeasonEpisode(!showSeasonEpisode)} />
-                                                    <div className="w-11 h-6 bg-neutral-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400 peer-checked:after:bg-black"></div>
-                                                </label>
-                                            </div>
-                                            {showSeasonEpisode && (
-                                                <div className="flex items-center gap-3 animate-slide-up">
-                                                    <select value={season} onChange={(e) => setSeason(parseInt(e.target.value))} className="flex-1 bg-white/10 border border-white/10 rounded-xl py-2 px-3 text-center font-bold text-sm text-white">
-                                                        {(tvDetails.seasons || [])
-                                                            .filter(s => s.season_number > 0 && s.air_date && s.air_date <= today)
-                                                            .map(s => <option key={s.id} value={s.season_number} className="bg-neutral-900">S{s.season_number.toString().padStart(2, '0')}</option>)}
-                                                    </select>
-                                                    <select value={episode} onChange={(e) => setEpisode(e.target.value === 'none' ? 'none' : parseInt(e.target.value))} className="flex-1 bg-white/10 border border-white/10 rounded-xl py-2 px-3 text-center font-bold text-sm text-white">
-                                                        <option value="none" className="bg-neutral-900 italic">Episode</option>
-                                                        {Array.from({ length: availableEpisodes }, (_, i) => i + 1).map(num => <option key={num} value={num} className="bg-neutral-900">E{num.toString().padStart(2, '0')}</option>)}
-                                                    </select>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    <div className="flex items-center justify-between bg-white/5 backdrop-blur-xl px-5 sm:px-6 py-4 rounded-[2rem] border border-white/10">
-                                        <div className="flex items-center gap-2 shrink-0"><Icon name="star" size={16} className="text-neutral-400" /><span className="text-[11px] sm:text-xs font-bold text-neutral-300 uppercase tracking-wide">Your Rating</span></div>
-                                        <div className="flex items-center gap-1 sm:gap-2">
-                                            {[1, 2, 3, 4, 5].map(star => <button key={star} onClick={() => setPersonalRating(star === personalRating ? 0 : star)} className="hover:scale-110 active:scale-95 transition-transform"><Icon name="star" size={26} className={star <= personalRating ? "text-yellow-400 fill-yellow-400" : "text-white/20 fill-white/5"} /></button>)}
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between bg-white/5 backdrop-blur-xl px-6 py-4 rounded-[2rem] border border-white/10">
-                                        <div className="flex items-center gap-3">
-                                            <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white shrink-0 shadow-lg">
-                                                <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="absolute -top-2 -left-2 w-12 h-12 cursor-pointer" />
-                                            </div>
-                                            <span className="text-xs font-bold text-neutral-300 uppercase">Color</span>
-                                        </div>
-                                        <div className="w-[1px] h-6 bg-white/20"></div>
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-xs font-bold text-neutral-300 uppercase">Opacity</span>
-                                            <input type="range" min="0" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-20 md:w-28 accent-white cursor-pointer" />
-                                        </div>
-                                    </div>
-
-                                    <button onClick={() => handleShare(selectedItem)} disabled={generating} className="w-full py-5 bg-white text-black rounded-[2rem] font-bold text-xl active:scale-95 transition-all shadow-2xl uppercase flex items-center justify-center gap-3 font-inter tracking-wider">
-                                        {generating ? <div className="w-6 h-6 border-4 border-black/20 border-t-black rounded-full animate-spin"></div> : <><Icon name="share" size={24} /><span>Share to Story</span></>}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    <canvas ref={canvasRef} className="hidden"></canvas>
-                </div>
-            );
+        const State = {
+            currentUser: null, currentRoomId: null, unsubscribeRoom: null, 
+            hostInactivityTimer: null, limitMs: 30 * 60 * 1000, isAutoNexting: false,
+            isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        const syncGlobalCards = async () => {
+            try {
+                const poolSnap = await getDoc(getGlobalPoolRef());
+                if (poolSnap.exists()) {
+                    const data = poolSnap.data();
+                    window.AppData.aiQuestions = data.questions || [];
+                    window.AppData.aiVotes = data.votes || [];
+                    saveLocalData();
+                    document.getElementById('global-pool-status').innerText = `${window.AppData.aiQuestions.length} Cloud Cards Tersinkronisasi`;
+                }
+            } catch(e) { console.log("Gagal sync global cards"); }
+        };
+
+        // --- 2. UI MANAGER ---
+        const UI = {
+            els: {
+                toast: document.getElementById('toast'), mainBody: document.getElementById('main-body'),
+                screens: document.querySelectorAll('.screen'), hostVoteCount: document.getElementById('host-vote-count')
+            },
+            showToast: (msg) => {
+                UI.els.toast.innerText = msg; UI.els.toast.classList.add('show');
+                setTimeout(() => UI.els.toast.classList.remove('show'), 3000);
+            },
+            switch: (screenId) => {
+                UI.els.screens.forEach(s => s.classList.add('hidden'));
+                const t = document.getElementById(screenId); if (t) t.classList.remove('hidden');
+                UI.els.mainBody.className = 'p-4 md:p-8 pt-[env(safe-area-inset-top,1rem)] pb-[env(safe-area-inset-bottom,1rem)]';
+            },
+            openModal: (id) => document.getElementById(id).classList.remove('hidden'),
+            closeModal: (id) => document.getElementById(id).classList.add('hidden'),
+            toggleFullscreen: () => { if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{}); else document.exitFullscreen(); },
+            formatName: (input) => { let v = input.value.replace(/[^A-Za-z0-9 ]/g, '').slice(0, 10); if (v.length > 0) v = v.charAt(0).toUpperCase() + v.slice(1).toLowerCase(); input.value = v; },
+            openPartyMenu: () => { if (State.isMobile) UI.switch('screen-guest-join'); else UI.switch('screen-party-menu'); },
+            
+            // ADMIN UI Logic
+            openAdminLogin: () => {
+                document.getElementById('admin-pass').value = '';
+                UI.switch('screen-admin-login');
+            },
+            submitAdminPass: () => {
+                const p = document.getElementById('admin-pass').value;
+                if (p === 'SKENA') UI.openAdmin();
+                else { UI.showToast('Password Salah!'); document.getElementById('admin-pass').value = ''; }
+            },
+            openAdmin: () => {
+                document.getElementById('edit-default-q').value = window.AppData.defaultQuestions.join('\n');
+                document.getElementById('edit-default-v').value = window.AppData.defaultVotes.join('\n');
+                document.getElementById('edit-ai-q').value = window.AppData.aiQuestions.join('\n');
+                document.getElementById('edit-ai-v').value = window.AppData.aiVotes.join('\n');
+                UI.switch('screen-admin');
+            },
+            saveCards: async (btnEl) => {
+                if (btnEl) { btnEl.innerText = "MENYIMPAN..."; btnEl.classList.add('opacity-50', 'pointer-events-none'); }
+                const cln = (s) => s.split('\n').map(x => x.trim()).filter(x => x.length > 0 && !x.includes('[object Object]'));
+                window.AppData.defaultQuestions = cln(document.getElementById('edit-default-q').value);
+                window.AppData.defaultVotes = cln(document.getElementById('edit-default-v').value);
+                window.AppData.aiQuestions = cln(document.getElementById('edit-ai-q').value);
+                window.AppData.aiVotes = cln(document.getElementById('edit-ai-v').value);
+                
+                saveLocalData();
+                
+                try {
+                    await setDoc(getGlobalPoolRef(), {
+                        questions: window.AppData.aiQuestions,
+                        votes: window.AppData.aiVotes
+                    }, { merge: true });
+                    UI.showToast("Konfigurasi Tersimpan!");
+                } catch(e) {
+                    console.error("Cloud Save Error:", e);
+                    UI.showToast("Lokal tersimpan. Gagal ke Cloud!");
+                }
+                
+                if (btnEl) { btnEl.innerText = "SIMPAN & KELUAR"; btnEl.classList.remove('opacity-50', 'pointer-events-none'); }
+                UI.switch('screen-main-menu');
+            }
+        };
+
+        // --- 3. UTILS & GESTURE ---
+        const Utils = {
+            shuffle: (arr) => { let res = [...arr]; for (let i = res.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [res[i], res[j]] = [res[j], res[i]]; } return res; },
+            applyDynamicFont: (el, text) => {
+                const len = text.length;
+                el.className = len > 80 
+                    ? 'text-lg md:text-2xl font-medium leading-relaxed tracking-normal transition-all' 
+                    : 'text-2xl md:text-4xl font-semibold leading-relaxed tracking-tight transition-all';
+            }
+        };
+
+        let touchStartX = 0, swipeTimer = null;
+        document.getElementById('screen-guest-arena').addEventListener('touchstart', e => touchStartX = e.changedTouches[0].screenX, { passive: true });
+        document.getElementById('screen-guest-arena').addEventListener('touchend', e => {
+            if (touchStartX - e.changedTouches[0].screenX > 50) {
+                document.getElementById('btn-guest-leave').classList.add('active');
+                if (swipeTimer) clearTimeout(swipeTimer);
+                swipeTimer = setTimeout(() => document.getElementById('btn-guest-leave').classList.remove('active'), 4000);
+            }
+        }, { passive: true });
+
+        // --- 4. AI MANAGER ---
+        const AIManager = {
+            generateDeck: async () => {
+                const s = document.getElementById('ai-status'), b = document.getElementById('btn-generate-ai');
+                s.innerText = "Meminta bantuan AI (Groq/OpenAI/Gemini)..."; 
+                s.className = "text-[10px] mt-3 text-blue-300 pulse-text font-semibold relative z-10";
+                b.classList.add('opacity-50', 'pointer-events-none');
+                
+                try {
+                    let parsedData;
+                    const isVercel = window.location.hostname !== 'localhost' && !window.location.hostname.includes('usercontent.goog');
+                    if (!isVercel) throw new Error("Fitur AI hanya dapat berjalan via Vercel (Produksi).");
+                    
+                    const res = await fetch('/api/generate', { method: 'POST' });
+                    parsedData = await res.json();
+                    
+                    if(!res.ok) throw new Error(parsedData.error || "Gagal memanggil AI dari server.");
+
+                    const newQ = sanitizeList(parsedData.questions);
+                    const newV = sanitizeList(parsedData.votes);
+                    if (newQ.length === 0 && newV.length === 0) throw new Error("Data kartu kosong.");
+
+                    const updatePayload = {};
+                    if (newQ.length > 0) updatePayload.questions = arrayUnion(...newQ);
+                    if (newV.length > 0) updatePayload.votes = arrayUnion(...newV);
+                    
+                    if (Object.keys(updatePayload).length > 0) await setDoc(getGlobalPoolRef(), updatePayload, { merge: true });
+                    await syncGlobalCards();
+                    document.getElementById('edit-ai-q').value = window.AppData.aiQuestions.join('\n');
+                    document.getElementById('edit-ai-v').value = window.AppData.aiVotes.join('\n');
+
+                    const aiName = parsedData.provider || "AI";
+                    s.innerText = `Berhasil via ${aiName}! (${newQ.length}Q, ${newV.length}V)`;
+                    s.className = "text-[10px] mt-3 text-green-400 font-bold tracking-wide relative z-10";
+                    UI.showToast(`Kartu diunggah via ${aiName}!`);
+                } catch (err) {
+                    s.innerText = `Gagal: ${err.message}`; s.className = "text-[10px] mt-3 text-red-400 font-bold tracking-wide relative z-10";
+                } finally { b.classList.remove('opacity-50', 'pointer-events-none'); }
+            }
+        };
+
+        // --- 5. LOCAL GAME MANAGER ---
+        const Game = {
+            deck: [], idx: 0, rot: 0, isAnim: false,
+            updateCard: (side, cardObj) => {
+                if(!cardObj) return;
+                const el = document.getElementById(`local-card-${side}`), txt = document.getElementById(`local-text-${side}`);
+                txt.innerText = cardObj.text;
+                Utils.applyDynamicFont(txt, cardObj.text);
+                el.classList.toggle('wildcard-bg', cardObj.t === 'wildcard'); el.classList.toggle('card-glass', cardObj.t !== 'wildcard');
+            },
+            initLocalCheck: () => {
+                if(localStorage.getItem('bincang_local_state')) UI.openModal('modal-resume');
+                else Game.startLocal(false);
+            },
+            startLocal: (resume) => {
+                UI.closeModal('modal-resume');
+                if (resume) {
+                    const st = JSON.parse(localStorage.getItem('bincang_local_state'));
+                    Game.deck = st.deck; Game.idx = st.idx;
+                } else {
+                    let activeQ = [...window.AppData.defaultQuestions, ...window.AppData.aiQuestions];
+                    if (activeQ.length === 0) activeQ = ["Kumpulan kartu kosong!"];
+                    let rawDeck = activeQ.map(q => ({ t: 'normal', text: q }));
+                    const wildCount = Math.max(2, Math.floor(rawDeck.length * 0.05));
+                    for(let i=0; i<wildCount; i++) rawDeck.push({ t: 'wildcard', text: window.AppData.wildcardText });
+                    Game.deck = Utils.shuffle(rawDeck); Game.idx = 0; 
+                }
+                Game.rot = 0; Game.isAnim = false;
+                Game.updateCard('front', Game.deck[Game.idx]);
+                if(Game.deck[Game.idx+1]) Game.updateCard('back', Game.deck[Game.idx+1]);
+                document.getElementById('local-counter').innerText = `${Game.deck.length - Game.idx} Sisa`;
+                document.getElementById('local-card-inner').style.setProperty('--rot', `0deg`);
+                localStorage.setItem('bincang_local_state', JSON.stringify({deck: Game.deck, idx: Game.idx}));
+                UI.switch('screen-local-game');
+            },
+            nextLocalCard: () => {
+                if (Game.isAnim) return; Game.isAnim = true; Game.idx++; SFX.play('flip');
+                if (Game.idx >= Game.deck.length) { UI.showToast("Mengacak ulang..."); Game.deck = Utils.shuffle(Game.deck); Game.idx = 0; }
+                Game.rot -= 180; document.getElementById('local-counter').innerText = `${Game.deck.length - Game.idx} Sisa`;
+                const isBack = (Math.abs(Game.rot) % 360 !== 0); Game.updateCard(isBack ? 'back' : 'front', Game.deck[Game.idx]);
+                document.getElementById('local-card-inner').style.setProperty('--rot', `${Game.rot}deg`);
+                if (Game.deck[Game.idx].t === 'wildcard') setTimeout(() => confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } }), 300);
+                localStorage.setItem('bincang_local_state', JSON.stringify({deck: Game.deck, idx: Game.idx}));
+                setTimeout(() => { if(Game.deck[Game.idx+1]) Game.updateCard(isBack ? 'front' : 'back', Game.deck[Game.idx+1]); Game.isAnim = false; }, 700);
+            },
+            prevLocalCard: () => {
+                if (Game.isAnim || Game.idx <= 0) return; Game.isAnim = true; Game.idx--; Game.rot += 180; SFX.play('flip');
+                document.getElementById('local-counter').innerText = `${Game.deck.length - Game.idx} Sisa`;
+                const isBack = (Math.abs(Game.rot) % 360 !== 0); Game.updateCard(isBack ? 'back' : 'front', Game.deck[Game.idx]);
+                document.getElementById('local-card-inner').style.setProperty('--rot', `${Game.rot}deg`);
+                localStorage.setItem('bincang_local_state', JSON.stringify({deck: Game.deck, idx: Game.idx}));
+                setTimeout(() => Game.isAnim = false, 700);
+            }
+        };
+
+        // --- 6. MULTIPLAYER MANAGER ---
+        const Multiplayer = {
+            voteInterval: null, // Timer handler
+            resetTimer: () => {
+                if (State.hostInactivityTimer) clearTimeout(State.hostInactivityTimer);
+                State.hostInactivityTimer = setTimeout(() => { UI.showToast("Sesi inaktif."); Multiplayer.endHostGame(); }, State.limitMs);
+            },
+            createRoom: async () => {
+                try {
+                    const userCred = await signInAnonymously(auth); State.currentUser = userCred.user;
+                    State.currentRoomId = Math.random().toString(36).substring(2, 7).toUpperCase(); 
+                    await setDoc(doc(getRoomsRef(), State.currentRoomId), { status: 'lobby', hostId: State.currentUser.uid, players: {}, deck: [], currentIndex: 0, lastActive: Date.now() });
+                    Multiplayer.resetTimer();
+                    document.getElementById('host-room-code').innerText = State.currentRoomId;
+                    document.getElementById('qrcode').innerHTML = ""; new QRCode(document.getElementById('qrcode'), { text: `${window.location.origin}${window.location.pathname}?room=${State.currentRoomId}`, width: 340, height: 340, colorDark: "#000000", colorLight: "#ffffff" });
+                    UI.switch('screen-host-lobby'); Multiplayer.listenHostLobby();
+                } catch(e) { UI.showToast("Gagal membuat ruangan."); }
+            },
+            shareRoom: async () => {
+                const url = `${window.location.origin}${window.location.pathname}?room=${State.currentRoomId}`;
+                if (navigator.share) navigator.share({ title: 'Bincang Kenal', text: `Gabung dengan kode: ${State.currentRoomId}`, url }).catch(()=>{});
+                else { navigator.clipboard.writeText(`Kode: ${State.currentRoomId} - ${url}`); UI.showToast("Link disalin!"); }
+            },
+            kickPlayer: async (uid) => {
+                if(uid === State.currentUser.uid) return;
+                try {
+                    const ref = doc(getRoomsRef(), State.currentRoomId); const snap = await getDoc(ref);
+                    const ps = snap.data().players; delete ps[uid]; await updateDoc(ref, { players: ps });
+                    UI.showToast("Pemain dikeluarkan.");
+                } catch(e){}
+            },
+            listenHostLobby: () => {
+                onSnapshot(doc(getRoomsRef(), State.currentRoomId), (snap) => {
+                    if (!snap.exists()) return; const data = snap.data(); const pKeys = Object.keys(data.players);
+                    document.getElementById('host-player-count').innerText = pKeys.length;
+                    const container = document.getElementById('floating-players'); container.innerHTML = '';
+                    pKeys.forEach((uid, i) => {
+                        const el = document.createElement('button'); el.className = 'floating-name'; el.innerText = data.players[uid].name;
+                        el.style.top = `${20 + (i * 15) % 60}%`; el.style.left = i % 2 === 0 ? '10%' : 'auto'; el.style.right = i % 2 !== 0 ? '10%' : 'auto'; el.style.animationDelay = `${i * 0.5}s`;
+                        el.title = "Keluarkan pemain"; el.onclick = () => Multiplayer.kickPlayer(uid);
+                        container.appendChild(el);
+                    });
+                    const btn = document.getElementById('btn-start-host');
+                    btn.classList.toggle('opacity-50', pKeys.length === 0); btn.classList.toggle('pointer-events-none', pKeys.length === 0);
+                });
+            },
+            startHostGame: async () => {
+                try {
+                    const snap = await getDoc(doc(getRoomsRef(), State.currentRoomId)); 
+                    const pKeys = Object.keys(snap.data().players);
+                    if(pKeys.length === 0) return UI.showToast("Belum ada pemain!");
+                    
+                    let rawDeck = [...window.AppData.defaultQuestions, ...window.AppData.aiQuestions].map(q => ({ t: 'normal', text: q }));
+                    [...window.AppData.defaultVotes, ...window.AppData.aiVotes].forEach(v => rawDeck.push({ t: 'vote', text: v }));
+                    const wildCount = Math.max(2, Math.floor(rawDeck.length * 0.05));
+                    for(let i=0; i<wildCount; i++) rawDeck.push({ t: 'wildcard', text: window.AppData.wildcardText });
+                    
+                    // ROTASI ADIL: Siapkan antrean pemain secara acak
+                    let queue = Utils.shuffle([...pKeys]);
+                    let firstGreenUid = queue.pop();
+
+                    await updateDoc(doc(getRoomsRef(), State.currentRoomId), { 
+                        status: 'playing', deck: Utils.shuffle(rawDeck), currentIndex: 0, 
+                        currentGreenUid: firstGreenUid, playerQueue: queue, // Simpan sisa antrean
+                        flashEndTime: Date.now() + 3000, lastActive: Date.now() 
+                    });
+                    Multiplayer.resetTimer(); 
+                    document.getElementById('host-arena-room-code').innerText = State.currentRoomId;
+                    UI.switch('screen-host-arena'); Multiplayer.listenHostArena();
+                } catch(e) { UI.showToast("Gagal memulai."); }
+            },
+            endHostGame: async () => { 
+                if (State.currentRoomId) {
+                    try { await deleteDoc(doc(getRoomsRef(), State.currentRoomId)); } catch(e){} 
+                }
+                State.currentRoomId = null;
+                UI.switch('screen-main-menu'); 
+            },
+            
+            lastIdxHost: -1, rotHost: 0, lastStatusHost: '',
+            updateHostCard: (side, cardObj) => {
+                if(!cardObj) return;
+                const el = document.getElementById(`host-arena-${side}`), txt = document.getElementById(`host-text-${side}`);
+                txt.innerText = cardObj.text; Utils.applyDynamicFont(txt, cardObj.text);
+                el.classList.toggle('wildcard-bg', cardObj.t !== 'normal'); el.classList.toggle('card-glass', cardObj.t === 'normal');
+            },
+            listenHostArena: () => {
+                onSnapshot(doc(getRoomsRef(), State.currentRoomId), (snap) => {
+                    if (!snap.exists()) return; const data = snap.data();
+                    document.getElementById('host-arena-counter').innerText = `${data.deck.length - data.currentIndex} Sisa`;
+                    
+                    if (data.currentIndex !== Multiplayer.lastIdxHost) {
+                        Multiplayer.rotHost -= 180; SFX.play('flip');
+                        const isBack = (Math.abs(Multiplayer.rotHost) % 360 !== 0);
+                        Multiplayer.updateHostCard(isBack ? 'back' : 'front', data.deck[data.currentIndex]);
+                        document.getElementById('host-arena-inner').style.setProperty('--rot', `${Multiplayer.rotHost}deg`);
+                        Multiplayer.lastIdxHost = data.currentIndex;
+                    }
+
+                    const isBackSide = (Math.abs(Multiplayer.rotHost) % 360 !== 0);
+                    const sideEl = document.getElementById(`host-text-${isBackSide ? 'back' : 'front'}`);
+                    
+                    if (data.status === 'voting_result') {
+                        sideEl.innerText = "🔒 VOTING DITUTUP 🔒\n\nSemua suara telah terkumpul.\nSiapakah dia?";
+                        sideEl.className = 'text-2xl md:text-4xl font-bold leading-relaxed tracking-wide text-white animate-pulse';
+                        document.getElementById('host-next-label').innerText = "Buka Hasil";
+                    } else if (data.status === 'explaining') {
+                        if (Multiplayer.lastStatusHost !== 'explaining') {
+                            SFX.play('cheer');
+                            confetti({ particleCount: 250, spread: 120, origin: { y: 0.5 } });
+                        }
+                        const tallies = {};
+                        Object.values(data.votes || {}).forEach(v => tallies[v] = (tallies[v]||0)+1);
+                        const sorted = Object.entries(tallies).sort((a,b) => b[1] - a[1]);
+                        
+                        let resTxt = `🎉 TERPILIH 🎉\n${data.players[data.explainerUid]?.name || 'Pemain'}\n\n`;
+                        resTxt += "📊 HASIL AKHIR:\n";
+                        if(sorted.length === 0) resTxt += "Tidak ada yang memilih";
+                        else sorted.forEach(([uid, count]) => resTxt += `${data.players[uid]?.name || 'Pemain'} (${count} suara)\n`);
+                        
+                        sideEl.innerText = resTxt;
+                        sideEl.className = 'text-xl md:text-3xl font-bold leading-relaxed tracking-wide text-yellow-300 whitespace-pre-wrap transition-all';
+                        document.getElementById('host-next-label').innerText = "Lanjut";
+                    } else {
+                        sideEl.innerText = data.deck[data.currentIndex].text;
+                        Utils.applyDynamicFont(sideEl, data.deck[data.currentIndex].text);
+                        document.getElementById('host-next-label').innerText = data.status === 'voting' ? "Tutup Vote" : "Lanjut";
+                    }
+
+                    // Manajemen Timer Live 30s
+                    if (Multiplayer.voteInterval) clearInterval(Multiplayer.voteInterval);
+                    const timerEl = document.getElementById('host-voting-timer');
+                    
+                    if (data.status === 'voting') {
+                        timerEl.classList.remove('hidden');
+                        const vCount = Object.keys(data.votes || {}).length;
+                        const pCount = Object.keys(data.players || {}).length;
+                        UI.els.hostVoteCount.innerText = `${vCount}/${pCount}`;
+                        
+                        // Set Interval Aktual
+                        Multiplayer.voteInterval = setInterval(() => {
+                            const rem = Math.max(0, Math.ceil((data.voteEndTime - Date.now()) / 1000));
+                            document.getElementById('timer-val').innerText = rem;
+                            
+                            // Jika waktu habis OR semua sudah vote
+                            if ((rem <= 0 || vCount >= pCount) && pCount > 0 && State.currentUser.uid === data.hostId) {
+                                clearInterval(Multiplayer.voteInterval);
+                                if (!State.isAutoNexting) {
+                                    State.isAutoNexting = true;
+                                    Multiplayer.hostNextPhase().finally(() => State.isAutoNexting = false);
+                                }
+                            }
+                        }, 500);
+
+                    } else { timerEl.classList.add('hidden'); }
+                    
+                    Multiplayer.lastStatusHost = data.status;
+                });
+            },
+            hostPrevPhase: async () => {
+                Multiplayer.resetTimer(); const ref = doc(getRoomsRef(), State.currentRoomId);
+                const snap = await getDoc(ref); const data = snap.data();
+                if(data.currentIndex > 0) {
+                    await updateDoc(ref, { currentIndex: data.currentIndex - 1, status: 'playing', lastActive: Date.now() });
+                }
+            },
+            hostNextPhase: async () => {
+                Multiplayer.resetTimer(); const ref = doc(getRoomsRef(), State.currentRoomId);
+                const snap = await getDoc(ref); const data = snap.data(); const pKeys = Object.keys(data.players);
+                
+                if (data.status === 'voting') {
+                    await updateDoc(ref, { status: 'voting_result', lastActive: Date.now() });
+                } else if (data.status === 'voting_result') {
+                    let tallies = {}, maxVal = 0, winner = pKeys[0];
+                    Object.values(data.votes || {}).forEach(v => { tallies[v] = (tallies[v]||0)+1; if(tallies[v]>maxVal){maxVal=tallies[v]; winner=v;} });
+                    await updateDoc(ref, { status: 'explaining', explainerUid: winner, flashEndTime: Date.now() + 3000, lastActive: Date.now() });
+                } else {
+                    const nxt = data.currentIndex + 1; if(nxt >= data.deck.length) return Multiplayer.endHostGame();
+                    const card = data.deck[nxt];
+                    
+                    if (card.t === 'vote') {
+                        await updateDoc(ref, { currentIndex: nxt, status: 'voting', voteEndTime: Date.now() + 30000, votes: {}, lastActive: Date.now() });
+                    } else {
+                        // SISTEM GILIRAN ADIL (ROUND-ROBIN)
+                        let queue = data.playerQueue || [];
+                        queue = queue.filter(uid => pKeys.includes(uid)); // Buang pemain yg sudah kluar
+                        if (queue.length === 0) queue = Utils.shuffle([...pKeys]); // Kalau antrean habis, acak ulang
+                        
+                        let nextGreenUid = queue.pop();
+                        
+                        await updateDoc(ref, { 
+                            currentIndex: nxt, status: 'playing', currentGreenUid: nextGreenUid, playerQueue: queue, 
+                            flashEndTime: Date.now() + 3000, lastActive: Date.now() 
+                        });
+                    }
+                }
+            },
+
+            // --- Guest Logic ---
+            submitGuestJoin: async () => {
+                const c = document.getElementById('guest-code').value.toUpperCase().trim(), n = document.getElementById('guest-name').value.trim();
+                if(!c || !n) return UI.showToast("Isi kode dan nama!");
+                try {
+                    const ref = doc(getRoomsRef(), c); const snap = await getDoc(ref);
+                    if (!snap.exists() || snap.data().status !== 'lobby') return UI.showToast("Ruangan 404/Sudah main!");
+                    const ps = snap.data().players; ps[State.currentUser.uid] = { name: n };
+                    await updateDoc(ref, { players: ps }); State.currentRoomId = c;
+                    localStorage.setItem('bincang_session', JSON.stringify({ uid: State.currentUser.uid, roomId: c }));
+                    document.getElementById('wait-guest-name').innerText = n; UI.switch('screen-guest-wait'); Multiplayer.listenGuest();
+                } catch(e) { UI.showToast("Gagal masuk."); }
+            },
+            leaveGuestRoom: () => {
+                if(State.unsubscribeRoom) { State.unsubscribeRoom(); State.unsubscribeRoom = null; }
+                localStorage.removeItem('bincang_session'); State.currentRoomId = null;
+                document.getElementById('guest-code').value = ''; document.getElementById('guest-name').value = ''; UI.switch('screen-main-menu');
+            },
+            listenGuest: () => {
+                if (State.unsubscribeRoom) State.unsubscribeRoom();
+                State.unsubscribeRoom = onSnapshot(doc(getRoomsRef(), State.currentRoomId), (snap) => {
+                    if (!State.currentRoomId) return; 
+                    if (!snap.exists() || snap.data().status === 'ended') { UI.showToast("Host mengakhiri game."); return Multiplayer.leaveGuestRoom(); }
+                    const d = snap.data(); if (Date.now() - d.lastActive > State.limitMs) return Multiplayer.leaveGuestRoom();
+
+                    if (d.status === 'lobby') UI.switch('screen-guest-wait');
+                    else {
+                        UI.switch('screen-guest-arena');
+                        const isMe = (d.status === 'playing' ? d.currentGreenUid : d.explainerUid) === State.currentUser.uid;
+                        const vView = document.getElementById('guest-vote-view'), sView = document.getElementById('guest-status-view');
+                        
+                        vView.classList.toggle('hidden', d.status !== 'voting');
+                        sView.classList.toggle('hidden', d.status === 'voting');
+                        
+                        if (d.status === 'voting') {
+                            UI.els.mainBody.className = 'p-4 md:p-8 pt-[env(safe-area-inset-top,1rem)] pb-[env(safe-area-inset-bottom,1rem)] theme-red'; 
+                            const list = document.getElementById('guest-vote-list');
+                            
+                            const sortedUids = Object.keys(d.players).sort((a, b) => d.players[a].name.localeCompare(d.players[b].name) || a.localeCompare(b));
+                            
+                            if (list.children.length !== sortedUids.length) {
+                                list.innerHTML = '';
+                                sortedUids.forEach(uid => {
+                                    const btn = document.createElement('button'); 
+                                    btn.id = `btn-vote-${uid}`; 
+                                    btn.innerText = d.players[uid].name;
+                                    btn.onclick = () => { SFX.play('tick'); updateDoc(doc(getRoomsRef(), State.currentRoomId), { [`votes.${State.currentUser.uid}`]: uid }); };
+                                    list.appendChild(btn);
+                                });
+                            }
+                            
+                            sortedUids.forEach(uid => {
+                                const btn = document.getElementById(`btn-vote-${uid}`);
+                                if (btn) {
+                                    const isSel = d.votes && d.votes[State.currentUser.uid] === uid;
+                                    btn.className = `p-4 md:p-5 rounded-[1rem] font-bold uppercase tracking-widest transition-all shadow-lg text-xs md:text-sm ${isSel ? 'bg-white text-black scale-105 shadow-[0_0_20px_rgba(255,255,255,0.4)]' : 'glass-btn text-white hover:scale-[1.02]'}`;
+                                }
+                            });
+                        } else if (d.status === 'voting_result') {
+                            UI.els.mainBody.className = 'p-4 md:p-8 pt-[env(safe-area-inset-top,1rem)] pb-[env(safe-area-inset-bottom,1rem)]';
+                            sView.innerHTML = `<h1 class="text-xl md:text-2xl font-semibold tracking-widest uppercase opacity-40 animate-pulse">Menghitung Suara...</h1>`;
+                        } else if (d.status === 'explaining') {
+                            UI.els.mainBody.className = `p-4 md:p-8 pt-[env(safe-area-inset-top,1rem)] pb-[env(safe-area-inset-bottom,1rem)] ${isMe ? 'theme-red' : 'theme-green'}`;
+                            if (isMe) {
+                                sView.innerHTML = `<div class="glass p-8 md:p-10 rounded-[3rem] shadow-[0_0_60px_rgba(239,68,68,0.6)] animate-bounce border-red-500/50">
+                                    <h1 class="text-4xl md:text-5xl font-black tracking-widest uppercase drop-shadow-md text-red-200 leading-tight">KAMU<br/>TERPILIH!</h1>
+                                    <p class="mt-4 text-xs md:text-sm font-bold opacity-90 uppercase tracking-widest">Siap-siap dihukum / jelaskan!</p>
+                                </div>`;
+                            } else {
+                                sView.innerHTML = `<div class="glass p-8 rounded-[2.5rem] border-green-500/30">
+                                    <p class="text-xs opacity-70 uppercase tracking-widest mb-3">Hasil Vote</p>
+                                    <h1 class="text-2xl md:text-4xl font-bold text-green-300">${d.players[d.explainerUid]?.name || 'Pemain'}</h1>
+                                    <h1 class="text-xl md:text-3xl font-bold opacity-90 mt-1">Terpilih!</h1>
+                                </div>`;
+                            }
+                        } else {
+                            UI.els.mainBody.className = `p-4 md:p-8 pt-[env(safe-area-inset-top,1rem)] pb-[env(safe-area-inset-bottom,1rem)] ${isMe ? 'theme-green' : 'theme-red'}`;
+                            sView.innerHTML = isMe 
+                                ? `<div class="glass p-8 md:p-10 rounded-full shadow-[0_0_60px_rgba(34,197,94,0.4)] animate-pulse"><h1 class="text-3xl md:text-5xl font-black tracking-widest uppercase drop-shadow-md">Giliranmu!</h1></div>`
+                                : `<h1 class="text-xl md:text-3xl font-semibold tracking-widest uppercase opacity-40">Menyimak...</h1>`;
+                        }
+                    }
+                });
+            }
+        };
+
+        window.UI = UI; window.Game = Game; window.AIManager = AIManager; window.Multiplayer = Multiplayer;
+        const uP = new URLSearchParams(window.location.search); const rC = uP.get('room');
+        if (rC) { UI.openPartyMenu(); UI.switch('screen-guest-join'); setTimeout(() => { const c = document.getElementById('guest-code'); if(c) c.value = rC.toUpperCase(); }, 100); }
+
+        onAuthStateChanged(auth, u => { 
+            if(u) {
+                State.currentUser = u; 
+                syncGlobalCards();
+                const sess = JSON.parse(localStorage.getItem('bincang_session')); 
+                if(sess && !State.currentRoomId && !rC) { State.currentRoomId = sess.roomId; Multiplayer.listenGuest(); }
+            } else signInAnonymously(auth).catch(()=>{});
+        });
     </script>
 </body>
 </html>
