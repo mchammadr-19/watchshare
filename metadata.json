@@ -1,0 +1,6 @@
+{
+  "name": "WatchShare",
+  "description": "Create amazing movie and TV show stories for your social media with this dynamic canvas editor.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
